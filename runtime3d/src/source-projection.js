@@ -86,21 +86,25 @@ export async function createSurfaceProjection(renderer,scene,nodes,plan,analysis
         if(!mesh.isMesh)return;
         if(!mesh.geometry.getAttribute('normal'))mesh.geometry.computeVertexNormals();
         const projector=new T.Matrix4().multiplyMatrices(sourceView,mesh.matrixWorld);
-        const normalMatrix=new T.Matrix3().getNormalMatrix(mesh.matrixWorld);
+        const sourceWorldMatrix=mesh.matrixWorld.clone();
         const patch=material=>{
           if(!material.isMeshStandardMaterial)throw new Error('Projection requires authored PBR mesh materials');
           const cloned=material.clone();
           cloned.onBeforeCompile=shader=>{
-            Object.assign(shader.uniforms,{sourceProjector:{value:projector},sourceNormalMatrix:{value:normalMatrix},
+            Object.assign(shader.uniforms,{sourceProjector:{value:projector},sourceWorldMatrix:{value:sourceWorldMatrix},
               sourceTowardsCamera:{value:towardCamera},sourceImage:{value:image},sourceMask:{value:masks.get(id)},
               sourceDepth:{value:target.depthTexture},sourceProjectionEnabled:enabled});
-            shader.vertexShader=`uniform mat4 sourceProjector;\nuniform mat3 sourceNormalMatrix;\nvarying vec4 sourceClip;\nvarying vec3 sourceNormal;\n${shader.vertexShader}`;
-            shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`#include <project_vertex>\nsourceClip=sourceProjector*vec4(position,1.0);\nsourceNormal=normalize(sourceNormalMatrix*normal);`);
-            shader.fragmentShader=`uniform sampler2D sourceImage;\nuniform sampler2D sourceMask;\nuniform sampler2D sourceDepth;\nuniform vec3 sourceTowardsCamera;\nuniform float sourceProjectionEnabled;\nvarying vec4 sourceClip;\nvarying vec3 sourceNormal;\n${shader.fragmentShader}`;
+            shader.vertexShader=`uniform mat4 sourceProjector;\nuniform mat4 sourceWorldMatrix;\nvarying vec4 sourceClip;\nvarying vec3 sourceWorld;\n${shader.vertexShader}`;
+            shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`#include <project_vertex>\nsourceClip=sourceProjector*vec4(position,1.0);\nsourceWorld=(sourceWorldMatrix*vec4(position,1.0)).xyz;`);
+            shader.fragmentShader=`uniform sampler2D sourceImage;\nuniform sampler2D sourceMask;\nuniform sampler2D sourceDepth;\nuniform vec3 sourceTowardsCamera;\nuniform float sourceProjectionEnabled;\nvarying vec4 sourceClip;\nvarying vec3 sourceWorld;\n${shader.fragmentShader}`;
             shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
 vec3 sourceP=sourceClip.xyz/sourceClip.w*0.5+0.5;
 vec2 sourceUV=vec2(sourceP.x,1.0-sourceP.y);
-float sourceFront=step(0.08,dot(normalize(sourceNormal),sourceTowardsCamera));
+// Use the actual triangle facing, not interpolated vertex shading normals.
+// Shared-vertex/smooth normals can point away at an otherwise visible corner.
+vec3 sourceGeometricNormal=normalize(cross(dFdx(sourceWorld),dFdy(sourceWorld)));
+sourceGeometricNormal*=gl_FrontFacing?1.0:-1.0;
+float sourceFront=step(0.08,dot(sourceGeometricNormal,sourceTowardsCamera));
 float sourceBounds=step(0.0,sourceP.x)*step(sourceP.x,1.0)*step(0.0,sourceP.y)*step(sourceP.y,1.0)*step(0.0,sourceP.z)*step(sourceP.z,1.0);
 float depthError=abs(texture2D(sourceDepth,sourceP.xy).r-sourceP.z);
 float sourceVisible=1.0-step(max(0.000002,0.75*fwidth(sourceP.z)),depthError);
@@ -108,7 +112,7 @@ float sourceWeight=sourceProjectionEnabled*sourceFront*sourceBounds*sourceVisibl
 outgoingLight=mix(outgoingLight,texture2D(sourceImage,sourceUV).rgb,sourceWeight);
 #include <opaque_fragment>`);
           };
-          cloned.customProgramCacheKey=()=> 'source-appearance-projection-v1';
+          cloned.customProgramCacheKey=()=> 'source-appearance-projection-v2-geometric-facing';
           return cloned;
         };
         savedMaterials.push([mesh,mesh.material]);
