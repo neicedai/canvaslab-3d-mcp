@@ -52,5 +52,22 @@ jobs:
       - name: Test the actual runtime dependencies
         run: npm test
       - name: Build the actual Three.js runtime
+        id: build
         if: always() && steps.install.outcome == 'success'
         run: npm run build
+      - name: Package reproducible browser inspection inputs
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/canvaslab-runtime"
+          git -C .. archive --format=tar.gz -o "$RUNNER_TEMP/canvaslab-runtime/source.tar.gz" HEAD
+          tar -czf "$RUNNER_TEMP/canvaslab-runtime/runtime.tar.gz" dist node_modules
+          git rev-parse HEAD > "$RUNNER_TEMP/canvaslab-runtime/commit.txt"
+          node --version > "$RUNNER_TEMP/canvaslab-runtime/node-version.txt"
+      - name: Retain the exact source and runtime bundle
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: canvaslab-runtime-inspection
+          path: ${{ runner.temp }}/canvaslab-runtime
+          retention-days: 7
+          if-no-files-found: error
