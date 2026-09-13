@@ -27,7 +27,10 @@ class DeformationFitTests(unittest.TestCase):
         def solve(measurement):
             return suggest_deformation_handles(plan,analysis,obj,recipe,[{"id":"p","anchor":anchor,"pixel":[target[0]+100,target[1]+50],"measurement":measurement,"evidence":"synthetic"}])["proposed_recipe"]["deformation_handles"][0]
         measured,estimated=solve("measured"),solve("estimated")
-        self.assertLess(np.linalg.norm(estimated["offset"]),np.linalg.norm(measured["offset"]))
+        # Blender applies offset * strength. Test the effective move, not a raw
+        # offset that would require confidence to be incorrectly applied twice.
+        self.assertLess(np.linalg.norm(estimated["offset"])*estimated["strength"],
+                        np.linalg.norm(measured["offset"])*measured["strength"])
         self.assertEqual(estimated["strength"],.4)
 
     def test_rejects_parented_perspective_existing_deformed_and_outside_source(self):
