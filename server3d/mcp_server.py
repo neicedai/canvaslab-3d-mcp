@@ -13,6 +13,7 @@ from .jobs import Store
 from .scene_schema import ScenePlan, Analysis
 from .component_schema import ComponentRecipe, COMPONENT_CONTRACT, COMPONENT_TEMPLATES
 from .deformation_fit import suggest_deformation_handles
+from .fidelity_compare import evaluate_scene_candidate
 
 
 def expected(function, *args):
@@ -166,6 +167,17 @@ def create_mcp(store: Store):
         """Run the managed local development worker against verified build bytes, never an arbitrary URL."""
         result = await asyncio.to_thread(expected, store.capture, job_id, build_id)
         return {k: v for k, v in result.items() if k != "observation"} | {"tests": result["observation"]["tests"], "errors": result["observation"]["errors"]}
+
+    @mcp.tool(structured_output=True)
+    def compare_scene_candidate(job_id: str, capture_id: str, baseline_audit_id: str) -> dict[str, Any]:
+        """Compare a new signed capture to a prior audited build using source-visible silhouettes.
+
+        The baseline and candidate must belong to the same job and exact source
+        annotations. A critical-region regression cannot be hidden by a higher
+        global mean. The result is only prefer_candidate / rollback_recommended /
+        inconclusive; it never accepts, publishes or certifies a reconstruction.
+        """
+        return expected(evaluate_scene_candidate, store, job_id, capture_id, baseline_audit_id)
 
     @mcp.tool(structured_output=True)
     def audit_scene_views(job_id: str, capture_id: str, model_findings: list[dict]) -> dict[str, Any]:
