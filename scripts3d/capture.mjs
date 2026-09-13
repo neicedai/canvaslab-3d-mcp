@@ -93,6 +93,9 @@ try{
   await page.locator('canvas').screenshot({path:path.join(out,'desktop.png')});
   const tests=[];
   const state=()=>page.evaluate(()=>window.canvaslab3d.snapshot());
+  // Canvas-only pixels exclude overlaid DOM controls changing selection/focus.
+  // Reading toDataURL does not request a render and still detects stale frames.
+  const canvasPixels=async()=>Buffer.from((await page.locator('canvas').evaluate(el=>el.toDataURL('image/png'))).split(',')[1],'base64');
   const river=plan.presentation==='jiangnan';
   const selectObject=async(id)=>{if(!river){await page.locator('#object').selectOption(id);return;}const s=await state();const [x,y,w,h]=s.objects[id].screen_box;await page.mouse.click(x+w/2,y+h/2);if((await state()).selected!==id)throw new Error('Visible component could not be selected: '+id);};
   const check=(name,passed,details)=>tests.push({name,passed:!!passed,details});
@@ -120,6 +123,7 @@ try{
   const start=await state();
   await page.getByRole('button',{name:'暮色',exact:true}).click();
   const night=await state();check('dusk_changes_scene',night.dusk&&!start.dusk,{before:start.dusk,after:night.dusk});
+  if(plan.reference_projection)check('source_projection_dusk_fallback',start.source_projection?.active===true&&night.source_projection?.active===false,{day:start.source_projection,night:night.source_projection});
   await page.getByRole('button',{name:river?'漫游':'播放动画',exact:true}).click();
   await page.waitForTimeout(250);const moving=await state();
   await page.getByRole('button',{name:river?'停止漫游':'暂停动画',exact:true}).click();
@@ -127,6 +131,7 @@ try{
   check('animation_advances_and_pauses',moving.time>0&&paused.time===still.time,{time:moving.time,paused:paused.time,still:still.time});
   await page.getByRole('button',{name:'复位',exact:true}).click();
   const reset=await state();check('reset_all_state',!reset.playing&&!reset.dusk&&reset.time===0,{time:reset.time,dusk:reset.dusk});
+  if(plan.reference_projection)check('source_projection_restored_without_geometry',reset.source_projection?.active===true&&reset.source_projection?.geometry_added===0,reset.source_projection);
   if(plan.objects.some(o=>o.kind==='asset')){
     const restored=plan.objects.filter(o=>o.kind==='asset').map(spec=>{
       const before=reference.objects[spec.id]?.component,after=reset.objects[spec.id]?.component;
@@ -158,14 +163,16 @@ try{
     check('pointer_drag_without_orbit',JSON.stringify(dragged.objects[ids[0]].position)!==JSON.stringify(pickState.objects[ids[0]].position)&&cameraDelta<1e-8,{id:ids[0],before:pickState.objects[ids[0]].position,after:dragged.objects[ids[0]].position,camera_delta:cameraDelta});
     await page.getByRole('button',{name:'复位',exact:true}).click();
     const beforeCancel=await state(),cancelBox=beforeCancel.objects[ids[0]].screen_box;
-    const cancelPixels=await page.locator('canvas').screenshot();
+    const cancelPixels=await canvasPixels();
     const [cx,cy,cw,ch]=cancelBox;
     await page.mouse.move(cx+cw/2,cy+ch/2);await page.mouse.down();
     await page.mouse.move(cx+cw/2+40,cy+ch/2+4,{steps:8});
     await page.locator('canvas').press('Escape');await page.mouse.up();
     // Screenshot before snapshot() can force a render: this catches a cached
     // frame that failed to redraw after cancellation restored the transform.
-    const cancelledPixels=await page.locator('canvas').screenshot(),cancelled=await state();
+    const cancelledPixels=await canvasPixels(),cancelled=await state();
+    await fs.writeFile(path.join(out,'cancel-before.png'),cancelPixels,{flag:'wx'});
+    await fs.writeFile(path.join(out,'cancel-after.png'),cancelledPixels,{flag:'wx'});
     const cancelComparison=await comparePixels(cancelledPixels,cancelPixels);
     check('escape_drag_cancel_restores_visible_frame',
       JSON.stringify(cancelled.objects[ids[0]].position)===JSON.stringify(beforeCancel.objects[ids[0]].position)&&cancelComparison.within_rounding,
