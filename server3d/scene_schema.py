@@ -47,8 +47,10 @@ class Region(Strict):
     confidence: float = Field(ge=0, le=1)
     evidence: str = Field(min_length=1, max_length=1000)
     # Visible silhouettes measured on the ORIGINAL, never inferred from a render.
-    # Multiple simple polygons form a union; holes are not supported in v1.
+    # Multiple simple polygons form the positive union. Holes subtract source-
+    # visible openings such as doors, bridge arches, rail gaps and canopy voids.
     visible_polygons: list[Polygon] = Field(default_factory=list, max_length=8)
+    visible_holes: list[Polygon] = Field(default_factory=list, max_length=8)
 
 
 class Analysis(Strict):
@@ -215,9 +217,11 @@ def validate_analysis(data: dict, source: dict) -> Analysis:
             raise ValueError(f"region {region.id} is outside native source bounds")
         if x < sx or y < sy or x+w > sx+sw or y+h > sy+sh:
             raise ValueError(f"region {region.id} is outside scene_box")
+        from .visual_metrics import validate_hole, validate_polygon
         for polygon in region.visible_polygons:
-            from .visual_metrics import validate_polygon
             validate_polygon(polygon, region.box)
+        for hole in region.visible_holes:
+            validate_hole(hole, region.visible_polygons, region.box)
     return analysis
 
 
