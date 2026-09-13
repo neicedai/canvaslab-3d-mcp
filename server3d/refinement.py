@@ -6,6 +6,7 @@ import copy
 import subprocess
 import time
 import uuid
+from typing import Any
 
 from .deformation_fit import suggest_deformation_handles
 from .fidelity_compare import evaluate_scene_candidate, measure_scene_fidelity
@@ -130,7 +131,7 @@ def refine_component_candidates(store, job_id, object_id, source_sha256, landmar
 
 def install_refinement_tools(mcp, store, expected):
     @mcp.tool(structured_output=True)
-    async def measure_scene_fidelity(job_id: str, capture_id: str) -> dict:
+    async def measure_scene_fidelity(job_id: str, capture_id: str) -> dict[str, Any]:
         """Measure actual ORIGINAL pixels, fine edges and silhouette; return native worst-patch boxes.
 
         Requires a current signed reference capture with passing interactions.
@@ -143,7 +144,7 @@ def install_refinement_tools(mcp, store, expected):
     @mcp.tool(structured_output=True)
     async def refine_scene_component(job_id: str, object_id: str, source_sha256: str,
                                      landmarks: list[dict], base_revision: int,
-                                     baseline_audit_id: str, max_candidates: int = 1) -> dict:
+                                     baseline_audit_id: str, max_candidates: int = 1) -> dict[str, Any]:
         """Run 1..3 bounded Blender/build/capture/compare trials in isolated child jobs.
 
         Supply current root-asset anchors and ORIGINAL native target pixels as
