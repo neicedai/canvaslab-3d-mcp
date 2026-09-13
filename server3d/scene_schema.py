@@ -163,6 +163,12 @@ class ReferenceLighting(Strict):
         return self
 
 
+class ReferenceProjection(Strict):
+    """Preserve observed appearance on existing surfaces, not recovered albedo."""
+    object_ids: list[Id] = Field(min_length=1, max_length=4)
+    mode: Literal["source_appearance"] = "source_appearance"
+
+
 class ScenePlan(Strict):
     contract_version: Literal["canvaslab-scene-v1"] = CONTRACT
     title: str = Field(min_length=1, max_length=100)
@@ -170,6 +176,7 @@ class ScenePlan(Strict):
     render_quality: RenderQuality = Field(default="standard", description="Geometry and sampling budget. In reference mode quality never enables stylistic material, water, environment or color-grading changes; legacy mode retains the historical showcase profile.")
     appearance_mode: Literal["legacy", "reference"] = Field(default="legacy", description="Omitted preserves existing scenes. New source-faithful jobs should explicitly use reference.")
     reference_lighting: ReferenceLighting | None = None
+    reference_projection: ReferenceProjection | None = None
     coordinate_system: Literal["right-handed-y-up-relative"] = "right-handed-y-up-relative"
     mode: Literal["true_3d"] = "true_3d"
     seed: int = Field(default=1977, ge=0, le=2**31-1)
@@ -188,6 +195,19 @@ class ScenePlan(Strict):
         mats = {x.id for x in self.materials}
         if len(nodes) != len(self.objects) or len(mats) != len(self.materials):
             raise ValueError("duplicate object or material IDs")
+        if self.reference_projection is not None:
+            projection = self.reference_projection
+            if (self.appearance_mode != "reference" or self.reference_lighting is None
+                    or self.reference_lighting.tone_mapping != "none" or self.reference_lighting.exposure != 1):
+                raise ValueError("source appearance projection requires reference mode, explicit tone_mapping=none and exposure=1")
+            if self.camera.projection != "orthographic":
+                raise ValueError("source appearance projection currently requires an orthographic reference camera")
+            if len(set(projection.object_ids)) != len(projection.object_ids):
+                raise ValueError("duplicate projection object IDs")
+            for identity in projection.object_ids:
+                node = nodes.get(identity)
+                if node is None or node.kind != "asset" or node.parent_id is not None or len(node.region_ids) != 1:
+                    raise ValueError("projection requires root registered assets with exactly one source region")
         for node in self.objects:
             if node.material_id not in mats or (node.accent_material_id and node.accent_material_id not in mats):
                 raise ValueError(f"unknown material on {node.id}")
