@@ -142,11 +142,32 @@ class SceneObject(Strict):
         return self
 
 
+class ReferenceLighting(Strict):
+    """Measured or explicitly estimated lighting; never inferred from quality level."""
+    sky_color: Color = "#ffffff"
+    ground_color: Color = "#808080"
+    hemisphere_intensity: float = Field(default=1.0, ge=0, le=4)
+    sun_color: Color = "#ffffff"
+    sun_intensity: float = Field(default=2.0, ge=0, le=8)
+    sun_position: Vec3 = Field(default_factory=lambda: [-8.0, 14.0, 8.0])
+    sun_target: Vec3 = Field(default_factory=lambda: [0.0, 0.0, 0.0])
+    exposure: float = Field(default=1.0, ge=0.1, le=4)
+    tone_mapping: Literal["aces", "none"] = "aces"
+
+    @model_validator(mode="after")
+    def direction(self):
+        if math.dist(self.sun_position, self.sun_target) < 0.01:
+            raise ValueError("sun position and target must differ")
+        return self
+
+
 class ScenePlan(Strict):
     contract_version: Literal["canvaslab-scene-v1"] = CONTRACT
     title: str = Field(min_length=1, max_length=100)
     presentation: Literal["studio", "jiangnan"] = "studio"
-    render_quality: RenderQuality = Field(default="standard", description="standard preserves the lightweight rendering and scene budgets; showcase enables the bounded high-detail material, lighting and geometry profile.")
+    render_quality: RenderQuality = Field(default="standard", description="Geometry and sampling budget. In reference mode quality never enables stylistic material, water, environment or color-grading changes; legacy mode retains the historical showcase profile.")
+    appearance_mode: Literal["legacy", "reference"] = Field(default="legacy", description="Omitted preserves existing scenes. New source-faithful jobs should explicitly use reference.")
+    reference_lighting: ReferenceLighting | None = None
     coordinate_system: Literal["right-handed-y-up-relative"] = "right-handed-y-up-relative"
     mode: Literal["true_3d"] = "true_3d"
     seed: int = Field(default=1977, ge=0, le=2**31-1)
@@ -159,6 +180,8 @@ class ScenePlan(Strict):
 
     @model_validator(mode="after")
     def graph(self):
+        if self.reference_lighting is not None and self.appearance_mode != "reference":
+            raise ValueError("reference_lighting requires appearance_mode=reference")
         nodes = {x.id: x for x in self.objects}
         mats = {x.id for x in self.materials}
         if len(nodes) != len(self.objects) or len(mats) != len(self.materials):
