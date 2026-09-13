@@ -12,6 +12,7 @@ from . import VERSION
 from .jobs import Store
 from .scene_schema import ScenePlan, Analysis
 from .component_schema import ComponentRecipe, COMPONENT_CONTRACT, COMPONENT_TEMPLATES
+from .deformation_fit import suggest_deformation_handles
 
 
 def expected(function, *args):
@@ -109,6 +110,41 @@ def create_mcp(store: Store):
         image fidelity; rebuild and capture the proposed plan before judging it.
         """
         return expected(store.landmark_proposal, job_id, source_sha256, landmarks, base_revision)
+
+    @mcp.tool(structured_output=True)
+    def suggest_component_deformation(job_id: str, object_id: str, source_sha256: str,
+                                      landmarks: list[dict], base_revision: int) -> dict[str, Any]:
+        """Fit bounded local component shape handles to ORIGINAL-image feature points.
+
+        Each landmark is {id, anchor:[x,y,z], pixel:[x,y], measurement, radius,
+        evidence}. anchor is the corresponding point on the CURRENT normalized
+        root component (x/z -0.5..0.5, y 0..1); pixel is the desired feature on
+        the ORIGINAL image in native coordinates. This first advisory supports
+        undeformed root assets with orthographic cameras only. It returns a new
+        component recipe but never generates/applies it. Generate that recipe,
+        rebuild and recapture before accepting any visual improvement.
+        """
+        job = expected(store.job, job_id)
+        if source_sha256 != job["source"]["sha256"]:
+            raise ToolError("Deformation landmarks must refer to this job's original image SHA256")
+        if type(base_revision) is not int or base_revision != job["plan_revision"]:
+            raise ToolError("Stale plan revision for component deformation fitting")
+        handoff = expected(store.handoff, job_id)
+        if not handoff.get("plan") or not handoff.get("analysis"):
+            raise ToolError("Validate a scene plan and source analysis before fitting component deformation")
+        objects = [item for item in handoff["plan"]["objects"] if item["id"] == object_id]
+        if len(objects) != 1:
+            raise ToolError("object_id must identify exactly one current scene object")
+        obj = objects[0]
+        if obj.get("kind") != "asset" or not obj.get("asset_id"):
+            raise ToolError("Component deformation fitting requires a registered asset object")
+        component = expected(store.components.get, obj["asset_id"])
+        proposal = expected(suggest_deformation_handles, handoff["plan"], handoff["analysis"],
+                            obj, component["recipe"], landmarks)
+        return proposal | {"job_id":job_id,"source_sha256":source_sha256,
+                           "base_revision":base_revision,"analysis_revision":job["analysis_revision"],
+                           "base_build_id":job["current_build_id"],"asset_id":obj["asset_id"],
+                           "evidence_type":"caller-measured source pixels and current normalized component anchors"}
 
     @mcp.tool(structured_output=True)
     def save_scene_analysis(job_id: str, analysis: dict, base_revision: int) -> dict[str, Any]:
