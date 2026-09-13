@@ -136,7 +136,7 @@ class ComponentLibrary:
             if (output/"component.glb").stat().st_size > limits.bytes or (output/"component.blend").stat().st_size > blend_limit:
                 raise ValueError("Blender output exceeds component size budget")
             payload = (output/"component.glb").read_bytes()
-            measured = validate_glb(payload, profile=budget_profile)
+            measured = validate_glb(payload, profile=budget_profile, texture_profile="embedded-png-v1")
             metadata = json.loads((output/"metadata.json").read_text(encoding="utf-8"))
             natural = metadata.get("natural_dimensions")
             if not isinstance(natural,list) or len(natural)!=3 or any(not isinstance(v,(int,float)) or not math.isfinite(v) or v<=0 for v in natural):
@@ -165,7 +165,7 @@ class ComponentLibrary:
                         for name,digest in orphan["files"].items():
                             if sha((destination/name).read_bytes())!=digest:
                                 raise ValueError("Uncommitted component file changed; administrator recovery required")
-                        validate_glb((destination/"component.glb").read_bytes(), profile=budget_profile)
+                        validate_glb((destination/"component.glb").read_bytes(), profile=budget_profile, texture_profile="embedded-png-v1")
                         record = orphan
                     else:
                         output.rename(destination)
@@ -197,4 +197,7 @@ class ComponentLibrary:
             raise ValueError("Scene instantiated triangle budget exceeded")
         if sum(r["bytes"] for r in records.values()) > download_limit:
             raise ValueError("Scene component download budget exceeded")
+        texture_limit = (32 if plan.get("render_quality") == "showcase" else 16) * 1024 * 1024
+        if sum(r["geometry"].get("texture_pixels", 0) for r in records.values()) > texture_limit:
+            raise ValueError("Scene component texture pixel budget exceeded")
         return {identity:{"record":record,"bytes":(self.root/identity/"component.glb").read_bytes()} for identity,record in records.items()}
