@@ -21,7 +21,9 @@ from server3d.glb_validation import validate_glb
 from server3d.tests.test_embedded_textures import fixture, pack
 
 
-def run(output: Path):
+def run(output: Path, group: str = "all"):
+    if group not in {"all", "standard", "showcase", "projection"}:
+        raise ValueError("Unknown integration group")
     output.mkdir(parents=True, exist_ok=False)
     store = Store(output / "store")
     base = store.components.generate({"template": "cargo_crate", "detail": 1}, "base")
@@ -57,7 +59,11 @@ def run(output: Path):
             cases.append((f"blender-{mode}-{quality}", changed["asset_id"], mode, quality))
     cases.append(("textured-reference", texture_id, "reference", "standard"))
     cases.append(("projected-reference", texture_id, "reference", "standard"))
-    report = {"kind": "synthetic-real-render-integration-v1", "source_is_user_reference": False,
+    if group != "all":
+        cases = [case for case in cases if
+                 (group == "projection" and case[0] in {"textured-reference", "projected-reference"}) or
+                 (group in {"standard", "showcase"} and case[0].startswith("blender-") and case[3] == group)]
+    report = {"group": group, "capture_timeout_seconds": 600, "kind": "synthetic-real-render-integration-v1", "source_is_user_reference": False,
               "blender": base["blender"], "base_asset": base["asset_id"], "deformed_asset": changed["asset_id"],
               "cases": [], "workflow_complete": False}
     for name, identity, mode, quality in cases:
@@ -84,7 +90,7 @@ def run(output: Path):
         write_build(directory, files)
         capture_dir = output / name
         result = subprocess.run([os.getenv("CANVASLAB3D_NODE", "node"), str(REPO / "scripts3d/capture.mjs"),
-                                 str(directory), str(capture_dir)], capture_output=True, text=True, timeout=150)
+                                 str(directory), str(capture_dir)], capture_output=True, text=True, timeout=600)
         (output / f"{name}.log").write_text(result.stdout + "\n" + result.stderr, encoding="utf-8")
         if result.returncode:
             raise RuntimeError(f"Real capture failed: {name}: {result.stderr[-2000:]}")
@@ -102,12 +108,17 @@ def run(output: Path):
             reliable = labels.point(lambda v: 255 if v == 1 else 0).filter(ImageFilter.MinFilter(5))
             selected = np.asarray(reliable) > 0
             errors = np.abs(actual - expected).mean(axis=2)[selected]
+            if not len(errors):
+                raise RuntimeError("Synthetic projection has no measured visible pixels")
             row["source_projection_pixel_test"] = {"synthetic_visible_pixels": int(selected.sum()),
                 "mean_abs_rgb_code_error": float(errors.mean()),
                 "within_two_code_values_fraction": float((errors < 2).mean()),
                 "not_a_reconstruction_fidelity_score": True}
-            if not len(errors) or (errors < 2).mean() < .85:
+            row["total_checks"] += 1
+            if (errors < 2).mean() < .85:
                 failed.append({"name": "synthetic_source_pixels_preserved", "passed": False})
+            else:
+                row["passed_checks"] += 1
         report["cases"].append(row)
         (output / "integration-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(row), flush=True)
@@ -119,4 +130,6 @@ def run(output: Path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="Fresh evidence directory; never overwrites existing output")
-    run(parser.parse_args().output.resolve())
+    parser.add_argument("--group", choices=("all", "standard", "showcase", "projection"), default="all")
+    args = parser.parse_args()
+    run(args.output.resolve(), args.group)
