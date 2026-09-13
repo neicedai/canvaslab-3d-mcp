@@ -30,7 +30,7 @@ def _basis(azimuth: float, elevation: float) -> tuple[np.ndarray, np.ndarray, np
     return right, up, outward
 
 
-def project_orthographic_points(source_size, world_points, camera) -> list[list[float]]:
+def project_orthographic_points(source_size, world_points, camera, *, framing_aspect=1.45) -> list[list[float]]:
     """Project with the exact native-aspect fitting rule used by runtime3d."""
     camera = Camera.model_validate(camera).model_dump()
     if camera["projection"] != "orthographic":
@@ -40,12 +40,12 @@ def project_orthographic_points(source_size, world_points, camera) -> list[list[
     azimuth = math.atan2(outward[0], outward[2])
     elevation = math.atan2(outward[1], math.hypot(outward[0], outward[2]))
     right, up, _ = _basis(azimuth, elevation)
-    scale = height / (camera["vertical_span"] * max(1., 1.45 / (width / height)))
+    scale = height / (camera["vertical_span"] * max(1., framing_aspect / (width / height)))
     relative = np.asarray(world_points, dtype=float) - np.asarray(camera["target"])
     return (np.column_stack((relative @ right, -relative @ up)) * scale + [width / 2, height / 2]).tolist()
 
 
-def fit_orthographic_landmarks(source_size, landmarks, initial_camera) -> dict:
+def fit_orthographic_landmarks(source_size, landmarks, initial_camera, *, framing_aspect=1.45) -> dict:
     """Fit Y-up camera yaw, elevation, scale and screen translation, with bounds.
 
     ``source_size`` and every pixel must describe the same native image or crop.
@@ -57,6 +57,8 @@ def fit_orthographic_landmarks(source_size, landmarks, initial_camera) -> dict:
             or any(type(v) not in (int, float) or not math.isfinite(v) or not 1 <= v <= 8192 for v in source_size)):
         raise ValueError("source_size must contain two finite native dimensions in [1,8192]")
     width, height = map(float, source_size)
+    if type(framing_aspect) not in (int, float) or not math.isfinite(framing_aspect) or not 0 < framing_aspect <= 8192:
+        raise ValueError("framing_aspect must be a finite positive aspect ratio")
     if not isinstance(landmarks, list) or not 4 <= len(landmarks) <= 128:
         raise ValueError("Provide 4 to 128 explicit native image/world landmarks")
     points = [CameraLandmark.model_validate(item) for item in landmarks]
@@ -85,7 +87,7 @@ def fit_orthographic_landmarks(source_size, landmarks, initial_camera) -> dict:
     # convention. Geometry changes remain separate, reviewable plan edits.
     lower = np.array([initial_yaw - math.pi / 4, math.radians(10)])
     upper = np.array([initial_yaw + math.pi / 4, math.radians(75)])
-    span_factor = max(1., 1.45 / (width / height))
+    span_factor = max(1., framing_aspect / (width / height))
     min_scale, max_scale = height / (150 * span_factor), height / span_factor
 
     def evaluate(angles):
@@ -129,10 +131,10 @@ def fit_orthographic_landmarks(source_size, landmarks, initial_camera) -> dict:
                 "vertical_span": height / (scale * span_factor)}
     proposed = Camera.model_validate(proposed).model_dump()
     # Reproject from the returned camera, rather than trusting optimizer state.
-    projected = np.asarray(project_orthographic_points(source_size, world, proposed))
+    projected = np.asarray(project_orthographic_points(source_size, world, proposed, framing_aspect=framing_aspect))
     deltas = projected - pixels
     errors = np.linalg.norm(deltas, axis=1)
-    initial_projected = np.asarray(project_orthographic_points(source_size, world, camera))
+    initial_projected = np.asarray(project_orthographic_points(source_size, world, camera, framing_aspect=framing_aspect))
     rms = float(np.sqrt(np.mean(errors ** 2)))
     warnings = ["Manual landmark agreement is camera calibration evidence, not a reconstruction certificate."]
     if rank == 2:
