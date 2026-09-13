@@ -5,11 +5,13 @@ import {loadComponentTemplates,instantiateComponent,componentInstanceInfo} from 
 import {enhanceRiverWater} from './river-water.js';
 import {enhanceShowcaseMaterials,createShowcaseEnvironment} from './showcase-materials.js';
 import {createShowcaseComposite} from './showcase-composite.js';
+import {resolveAppearance,referenceLightState} from './reference-appearance.js';
 
 async function start(){
   const [plan,manifest,analysis]=await Promise.all(['scene.json','build-manifest.json','reference-annotations.json'].map(async n=>{const r=await fetch(`./${n}`);if(!r.ok)throw new Error(`Missing ${n}`);return r.json();}));
   document.title=`${plan.title} · CanvasLab 3D`;document.querySelector('#title').textContent=plan.title;
   const river=plan.presentation==='jiangnan',showcase=plan.render_quality==='showcase';document.body.dataset.presentation=plan.presentation||'studio';
+  const appearance=resolveAppearance(plan,analysis),{reference,stylized}=appearance;document.body.dataset.appearance=appearance.mode;
   const canvas=document.querySelector('canvas');
   const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false,preserveDrawingBuffer:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,showcase?2:1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
@@ -18,24 +20,35 @@ async function start(){
   const hemi=new T.HemisphereLight(0xf5edda,0x6b766b,2.3);scene.add(hemi);
   const sun=new T.DirectionalLight(0xffebc5,3.1);sun.position.set(-8,14,8);sun.castShadow=true;
   sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:1,far:60});sun.shadow.bias=-.0003;scene.add(sun);
-  if(showcase){
+  if(stylized){
     const environment=createShowcaseEnvironment(renderer);scene.environment=environment.texture;scene.environmentIntensity=.40;
     hemi.color.set('#e4eced');hemi.groundColor.set('#806c49');hemi.intensity=.90;
     sun.intensity=3.3;sun.color.set('#fff0d3');sun.shadow.mapSize.set(Math.min(4096,renderer.capabilities.maxTextureSize),Math.min(4096,renderer.capabilities.maxTextureSize));
     sun.shadow.radius=8.0;sun.shadow.normalBias=.012;sun.shadow.bias=-.00012;
     renderer.toneMappingExposure=1.02;
   }
+  if(reference){
+    const cfg=appearance.lighting;
+    hemi.color.set(cfg.sky_color);hemi.groundColor.set(cfg.ground_color);hemi.intensity=cfg.hemisphere_intensity;
+    sun.color.set(cfg.sun_color);sun.intensity=cfg.sun_intensity;
+    sun.position.fromArray(cfg.sun_position);sun.target.position.fromArray(cfg.sun_target);scene.add(sun.target);
+    renderer.toneMapping=cfg.tone_mapping==='none'?T.NoToneMapping:T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=cfg.exposure;
+    // Sampling may improve; authored colors, light direction and geometry may not change.
+    const shadowSize=Math.min(showcase?4096:2048,renderer.capabilities.maxTextureSize);
+    sun.shadow.mapSize.set(shadowSize,shadowSize);
+  }
   const materials=new Map(plan.materials.map(x=>[x.id,new T.MeshStandardMaterial({color:x.color,roughness:x.roughness,metalness:x.metalness,side:T.DoubleSide})]));
   const components=await loadComponentTemplates(plan.objects,manifest);
   const nodes=new Map(plan.objects.map(x=>[x.id,x.kind==='asset'?instantiateComponent(components.get(x.asset_id),x):createObject(x,materials,plan.seed)]));
   for(const spec of plan.objects)(spec.parent_id?nodes.get(spec.parent_id):scene).add(nodes.get(spec.id));
   let reflectionAvailable=true;
-  if(river)for(const spec of plan.objects)if(spec.kind==='water'){
+  if(river&&!reference)for(const spec of plan.objects)if(spec.kind==='water'){
     enhanceRiverWater(nodes.get(spec.id),plan.seed,{showcase,reflection:showcase&&reflectionAvailable});reflectionAvailable=false;
   }
-  const craft=showcase?enhanceShowcaseMaterials(nodes):null;
+  const craft=stylized?enhanceShowcaseMaterials(nodes):null;
   let helperTriangles=0;
-  if(showcase){
+  if(stylized){
     const bounds=new T.Box3().setFromObject(scene),center=bounds.getCenter(new T.Vector3()),span=bounds.getSize(new T.Vector3()).length()*.56;
     sun.target.position.copy(center);scene.add(sun.target);sun.position.copy(center).add(new T.Vector3(-10,18,10));
     Object.assign(sun.shadow.camera,{left:-span,right:span,top:span,bottom:-span,near:.2,far:80});sun.shadow.camera.updateProjectionMatrix();
@@ -46,9 +59,9 @@ async function start(){
   }
   const ortho=new T.OrthographicCamera(-10,10,10,-10,.1,500),perspective=new T.PerspectiveCamera(plan.camera.fov,1,.1,500);
   let camera=plan.camera.projection==='orthographic'?ortho:perspective;
-  const composite=showcase?createShowcaseComposite(renderer):null;let renderDirty=true;
+  const composite=stylized?createShowcaseComposite(renderer):null;let renderDirty=true;
   if(showcase){renderer.info.autoReset=false;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;}
-  function renderScene(){renderDirty=false;if(showcase){renderer.info.reset();composite.render(scene,camera);}else renderer.render(scene,camera);}
+  function renderScene(){renderDirty=false;if(showcase)renderer.info.reset();if(composite)composite.render(scene,camera);else renderer.render(scene,camera);}
   const target=new T.Vector3().fromArray(plan.camera.target),homeCamera=new T.Vector3().fromArray(plan.camera.position);
   const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.enablePan=false;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI/2-.06;controls.minZoom=.6;controls.maxZoom=3;controls.minDistance=3;controls.maxDistance=100;
   controls.addEventListener('change',()=>{renderDirty=true;});
@@ -58,10 +71,12 @@ async function start(){
   const offsets=new Map(plan.objects.filter(x=>x.movement).map(x=>[x.id,new T.Vector3()]));
   const select=document.querySelector('#object');
   for(const x of plan.objects.filter(x=>x.movement)){const option=document.createElement('option');option.value=x.id;option.textContent=x.label;select.append(option);}
-  function fit(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);const aspect=w/h;if(camera.isOrthographicCamera){const half=plan.camera.vertical_span/2*Math.max(1,1.45/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;}else{camera.aspect=aspect;camera.fov=T.MathUtils.radToDeg(2*Math.atan(Math.tan(T.MathUtils.degToRad(plan.camera.fov)/2)*Math.max(1,1.45/aspect)));}camera.updateProjectionMatrix();renderDirty=true;}
+  function fit(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);const aspect=w/h;if(camera.isOrthographicCamera){const half=plan.camera.vertical_span/2*Math.max(1,appearance.framingAspect/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;}else{camera.aspect=aspect;camera.fov=T.MathUtils.radToDeg(2*Math.atan(Math.tan(T.MathUtils.degToRad(plan.camera.fov)/2)*Math.max(1,appearance.framingAspect/aspect)));}camera.updateProjectionMatrix();renderDirty=true;}
   function resetCamera(){const damping=controls.enableDamping;controls.enableDamping=false;controls.update();camera.position.copy(homeCamera);camera.zoom=1;camera.lookAt(target);controls.target.copy(target);camera.updateProjectionMatrix();controls.update();controls.enableDamping=damping;}
-  function light(on){dusk=on;scene.background.set(on?'#364b55':plan.background);sun.intensity=showcase?(on?.48:3.3):(on?.75:3.1);hemi.intensity=showcase?(on?.48:.90):(on?1:2.3);sun.color.set(on?'#a8c4ef':showcase?'#fff0d3':'#ffebc5');
-    if(showcase){scene.environmentIntensity=on?.18:.40;craft.setDusk(on);for(const node of nodes.values())node.userData.setWaterDusk?.(on);scene.userData.canvaslabWaterRevision=(scene.userData.canvaslabWaterRevision||0)+1;}
+  function light(on){dusk=on;scene.background.set(on?'#364b55':plan.background);
+    if(reference){const cfg=referenceLightState(appearance.lighting,on);sun.intensity=cfg.sun_intensity;hemi.intensity=cfg.hemisphere_intensity;sun.color.set(cfg.sun_color);}
+    else{sun.intensity=showcase?(on?.48:3.3):(on?.75:3.1);hemi.intensity=showcase?(on?.48:.90):(on?1:2.3);sun.color.set(on?'#a8c4ef':showcase?'#fff0d3':'#ffebc5');}
+    if(stylized){scene.environmentIntensity=on?.18:.40;craft.setDusk(on);for(const node of nodes.values())node.userData.setWaterDusk?.(on);scene.userData.canvaslabWaterRevision=(scene.userData.canvaslabWaterRevision||0)+1;}
     renderDirty=true;document.body.dataset.dusk=String(on);document.querySelector('#dusk').setAttribute('aria-pressed',String(on));document.querySelector('#day').setAttribute('aria-pressed',String(!on));}
   function motion(on){playing=on;document.querySelector('#motion').setAttribute('aria-pressed',String(on));document.querySelector('#motion span').textContent=river?(on?'停止漫游':'漫游'):(on?'暂停动画':'播放动画');}
   function projection(kind){camera=kind==='orthographic'?ortho:perspective;controls.object=camera;fit();resetCamera();document.querySelector('#iso').setAttribute('aria-pressed',String(camera===ortho));document.querySelector('#perspective').setAttribute('aria-pressed',String(camera===perspective));}
@@ -93,7 +108,7 @@ async function start(){
     for(const [id,node] of nodes){const box=new T.Box3().setFromObject(node),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera));
       const visible=points.some(p=>p.z>=-1&&p.z<=1);const xs=points.map(p=>(p.x+1)*w/2),ys=points.map(p=>(1-p.y)*h/2);
       out[id]={position:node.position.toArray(),quaternion:node.quaternion.toArray(),component:componentInstanceInfo(node),world_box:[box.min.toArray(),box.max.toArray()],screen_box:visible?[Math.min(...xs),Math.min(...ys),Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys)]:null};}return out;}
-  function snapshot(){renderScene();return {build_id:manifest.build_id,objects:objectInfo(),camera:{position:camera.position.toArray(),target:controls.target.toArray(),projection:camera.projectionMatrix.toArray()},playing,time:elapsed,dusk,selected,render_quality:plan.render_quality||'standard',material_families:craft?.families,local_lights:craft?.lightCount||0,helper_triangles:helperTriangles,draw_calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,webgl_version:renderer.getContext().getParameter(renderer.getContext().VERSION)};}
+  function snapshot(){renderScene();return {build_id:manifest.build_id,objects:objectInfo(),camera:{position:camera.position.toArray(),target:controls.target.toArray(),projection:camera.projectionMatrix.toArray()},playing,time:elapsed,dusk,selected,render_quality:plan.render_quality||'standard',appearance_mode:appearance.mode,lighting_variant:reference?(dusk?'inferred-dusk':'reference'):'legacy',material_families:craft?.families,local_lights:craft?.lightCount||0,helper_triangles:helperTriangles,draw_calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,webgl_version:renderer.getContext().getParameter(renderer.getContext().VERSION)};}
   function prepare({yaw=0,time=0,night=false,zoom=1}={}){if(!Number.isFinite(yaw)||Math.abs(yaw)>plan.view_angle_degrees)throw new Error('View outside contract');if(!Number.isFinite(zoom)||zoom<1||zoom>2.2)throw new Error('Capture zoom must be between 1 and 2.2');captureMode=true;document.body.dataset.capture='true';finish(true);reset();captureMode=true;renderer.setPixelRatio(1);fit();controls.enableDamping=false;controls.enabled=false;elapsed=time;sample(time);light(night);const offset=homeCamera.clone().sub(target).applyAxisAngle(new T.Vector3(0,1,0),T.MathUtils.degToRad(yaw));camera.position.copy(target).add(offset);camera.zoom=zoom;camera.updateProjectionMatrix();camera.lookAt(target);camera.updateMatrixWorld(true);renderScene();return snapshot();}
   function diagnostic(mode){if(!['id','depth'].includes(mode))throw new Error('Unknown diagnostic mode');const saved=[],helperVisibility=[],background=scene.background,tm=renderer.toneMapping,space=renderer.outputColorSpace,shadow=renderer.shadowMap.enabled,oldTarget=renderer.getRenderTarget();
     // Main canvas MSAA blends neighboring IDs into other valid object IDs.
