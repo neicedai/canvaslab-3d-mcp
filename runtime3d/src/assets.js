@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {inspectEmbeddedTextures,createEmbeddedTexturePlugin,MAX_SCENE_TEXTURE_PIXELS} from './embedded-textures.js';
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const NORMALIZED_MIN = [-0.5, 0, -0.5];
@@ -16,9 +17,9 @@ export function componentFilename(assetId, manifest) {
 }
 
 // This intentionally supports only the managed worker's static, opaque PBR
-// subset. Inspect before GLTFLoader runs: no URI, texture loader, extension
-// resolver, animation or executable payload may silently expand that contract.
-export function inspectComponentGlb(buffer) {
+// subset. PNG textures are explicit and decoded from validated BIN bytes only.
+// External resources, extensions and animations remain forbidden.
+function inspectComponentData(buffer, {allowTextures=false}={}) {
   // Absolute transport ceiling matches managed showcase assets. The server
   // still enforces the smaller standard-profile geometry and byte budgets.
   if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 24 || buffer.byteLength > 64 * 1024 * 1024) {
@@ -28,16 +29,17 @@ export function inspectComponentGlb(buffer) {
   if (view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2 || view.getUint32(8, true) !== buffer.byteLength) {
     throw new Error('Component must be a complete GLB version 2 file');
   }
-  let offset = 12, document = null, binaryLength = null;
+  let offset = 12, document = null, binaryLength = null, binaryOffset = 0;
   while (offset < buffer.byteLength) {
     if (offset + 8 > buffer.byteLength) throw new Error('Truncated GLB chunk');
     const length = view.getUint32(offset, true), type = view.getUint32(offset + 4, true);
     offset += 8;
-    if (length % 4 || offset + length > buffer.byteLength) throw new Error('Invalid GLB chunk length');
+    if (!length || length % 4 || offset + length > buffer.byteLength) throw new Error('Invalid GLB chunk length');
     if (type === 0x4e4f534a && document === null && binaryLength === null) {
+      if (length > 2 * 1024 * 1024) throw new Error('GLB JSON budget exceeded');
       document = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(new Uint8Array(buffer, offset, length)));
     } else if (type === 0x004e4942 && document !== null && binaryLength === null) {
-      binaryLength = length;
+      binaryLength = length;binaryOffset = offset;
     } else throw new Error('Unsupported or repeated GLB chunk');
     offset += length;
   }
@@ -48,23 +50,31 @@ export function inspectComponentGlb(buffer) {
   if (!Number.isSafeInteger(declared) || declared < 1 || declared > binaryLength || binaryLength - declared > 3) {
     throw new Error('Invalid embedded component buffer');
   }
-  for (const field of ['images', 'textures', 'skins', 'animations', 'cameras', 'extensionsUsed', 'extensionsRequired']) {
+  for (const field of [...(allowTextures?[]:['images','textures','samplers']), 'skins', 'animations', 'cameras', 'extensionsUsed', 'extensionsRequired']) {
     if (document[field] !== undefined && (!Array.isArray(document[field]) || document[field].length !== 0)) {
       throw new Error(`Unsupported component feature: ${field}`);
     }
   }
-  function inspect(value) {
+  let elements=0;
+  function inspect(value, depth=0) {
+    if (++elements > 50000 || depth > 32) throw new Error('GLB JSON complexity budget exceeded');
     if (!value || typeof value !== 'object') return;
     for (const [key, item] of Object.entries(value)) {
-      if (['uri', 'extensions', 'targets', 'weights'].includes(key) || key.endsWith('Texture')) {
+      if (['uri', 'extensions', 'targets', 'weights'].includes(key.toLowerCase()) || (key.endsWith('Texture') && !(allowTextures && key==='baseColorTexture'))) {
         throw new Error(`Unsupported component resource or feature: ${key}`);
       }
       if (key === 'alphaMode' && item !== 'OPAQUE') throw new Error('Only opaque component materials are supported');
-      inspect(item);
+      inspect(item,depth+1);
     }
   }
   inspect(document);
-  return document;
+  const binary=new Uint8Array(buffer,binaryOffset,declared);
+  if (new Uint8Array(buffer,binaryOffset+declared,binaryLength-declared).some(x=>x!==0)) throw new Error('Invalid BIN padding');
+  return {document,resources:allowTextures?inspectEmbeddedTextures(document,binary):null};
+}
+
+export function inspectComponentGlb(buffer, options) {
+  return inspectComponentData(buffer,options).document;
 }
 
 export function validateNormalizedComponent(scene) {
@@ -133,7 +143,7 @@ export function componentInstanceInfo(root) {
 }
 
 export async function loadComponentTemplates(objects, manifest, fetchImpl = fetch) {
-  const templates = new Map();
+  const templates = new Map();let texturePixels=0;
   for (const assetId of new Set(objects.filter(o => o.kind === 'asset').map(o => o.asset_id))) {
     const filename = componentFilename(assetId, manifest);
     const response = await fetchImpl(`./${filename}`, {redirect: 'error', credentials: 'same-origin'});
@@ -141,10 +151,18 @@ export async function loadComponentTemplates(objects, manifest, fetchImpl = fetc
     const buffer = await response.arrayBuffer();
     const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buffer)), b => b.toString(16).padStart(2, '0')).join('');
     if (digest !== assetId) throw new Error(`Changed component bytes: ${assetId}`);
-    inspectComponentGlb(buffer);
+    const {resources}=inspectComponentData(buffer,{allowTextures:true});
+    texturePixels+=resources.pixels;
+    if (texturePixels > MAX_SCENE_TEXTURE_PIXELS) throw new Error('Scene component texture pixel budget exceeded');
     const manager = new T.LoadingManager();
     manager.setURLModifier(() => {throw new Error('Component resource loading is forbidden');});
-    const gltf = await new GLTFLoader(manager).parseAsync(buffer, '');
+    const loader=new GLTFLoader(manager);let texturePlugin=null;
+    if (resources.textures.length) loader.register(parser => {
+      texturePlugin=createEmbeddedTexturePlugin(T,parser,resources);return texturePlugin;
+    });
+    let gltf;
+    try{gltf=await loader.parseAsync(buffer,'');}
+    catch(error){await texturePlugin?.dispose();throw error;}
     if (gltf.animations.length) throw new Error('Embedded component animations are not supported');
     validateNormalizedComponent(gltf.scene);
     templates.set(assetId, gltf.scene);
