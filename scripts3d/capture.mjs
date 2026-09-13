@@ -168,8 +168,9 @@ try{
     await page.mouse.move(cx+cw/2,cy+ch/2);await page.mouse.down();
     await page.mouse.move(cx+cw/2+40,cy+ch/2+4,{steps:8});
     await page.locator('canvas').press('Escape');await page.mouse.up();
-    // Screenshot before snapshot() can force a render: this catches a cached
-    // frame that failed to redraw after cancellation restored the transform.
+    // Allow the normal scheduled render, but never force one through snapshot().
+    // Two RAF callbacks also catch a missing renderDirty flag in idle showcase.
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const cancelledPixels=await canvasPixels(),cancelled=await state();
     await fs.writeFile(path.join(out,'cancel-before.png'),cancelPixels,{flag:'wx'});
     await fs.writeFile(path.join(out,'cancel-after.png'),cancelledPixels,{flag:'wx'});
