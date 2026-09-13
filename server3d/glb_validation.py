@@ -3,7 +3,8 @@
 Only static, self-contained, opaque triangle meshes are accepted. Geometry is
 read from actual binary accessors and transformed through the complete scene;
 declared accessor bounds are never trusted as proof of geometry. No third-party
-parser, image decoder, script, URI, extension or external process is invoked.
+parser, script, URI, extension or external process is invoked. The opt-in
+embedded-png-v1 path validates bounded PNG scanlines using the standard library.
 """
 from __future__ import annotations
 
@@ -185,17 +186,20 @@ def _check_triangle(a: tuple, b: tuple, c: tuple) -> None:
         _fail("degenerate triangles are unsupported")
 
 
-def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
+def validate_glb(payload: bytes, *, profile: str = "standard", texture_profile: str = "none") -> dict:
     """Validate the v0.3 managed component subset, returning measured metadata.
 
     Raises ValueError for every rejected input. Limits apply to both stored
     geometry and actual instantiated geometry, so mesh reuse cannot evade them.
     Component world bounds must be [-.5, 0, -.5] to [.5, 1, .5].
     """
+    if not isinstance(texture_profile, str) or texture_profile not in {"none", "embedded-png-v1"}:
+        _fail("unknown texture profile")
+    textured = texture_profile == "embedded-png-v1"
     limits = glb_limits(profile)
     document, binary = _parse_glb(payload, limits.bytes)
     _object(document, "document", {"asset", "scene", "scenes", "nodes", "meshes", "materials",
-                                   "buffers", "bufferViews", "accessors"})
+                                   "buffers", "bufferViews", "accessors"} | ({"images", "textures", "samplers"} if textured else set()))
     asset = _object(document.get("asset"), "asset", {"version", "minVersion", "generator", "copyright"})
     if asset.get("version") != "2.0" or asset.get("minVersion", "2.0") != "2.0":
         _fail("asset must specify glTF 2.0")
@@ -230,6 +234,8 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
         shape = accessor.get("type")
         if component == 5126 and shape == "VEC3":
             fmt, item_bytes, component_bytes, width = "<3f", 12, 4, 3
+        elif textured and component == 5126 and shape == "VEC2":
+            fmt, item_bytes, component_bytes, width = "<2f", 8, 4, 2
         elif component in (5121, 5123, 5125) and shape == "SCALAR":
             fmt, component_bytes = {5121: ("<B", 1), 5123: ("<H", 2), 5125: ("<I", 4)}[component]
             item_bytes, width = component_bytes, 1
@@ -254,15 +260,25 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
             _fail("accessor min exceeds max")
         layouts.append((absolute, stride, count, fmt, component, shape, vi))
 
+    texture_info = {"images": [], "image_views": set(), "texture_count": 0, "texture_pixels": 0}
+    if textured:
+        from .texture_validation import inspect_texture_resources
+        texture_info = inspect_texture_resources(document, binary, views)
+    material_textures = {}
     materials = _array(document.get("materials", []), "materials", 64)
-    for material in materials:
+    for material_index, material in enumerate(materials):
         _object(material, "material", {"name", "pbrMetallicRoughness", "emissiveFactor", "alphaMode", "doubleSided"})
         if material.get("alphaMode", "OPAQUE") != "OPAQUE":
             _fail("only opaque materials are supported")
         if type(material.get("doubleSided", False)) is not bool:
             _fail("doubleSided must be boolean")
         _vector(material.get("emissiveFactor", [0, 0, 0]), 3, "emissive factor", 0, 1)
-        pbr = _object(material.get("pbrMetallicRoughness", {}), "PBR material", {"baseColorFactor", "metallicFactor", "roughnessFactor"})
+        pbr = _object(material.get("pbrMetallicRoughness", {}), "PBR material", {"baseColorFactor", "metallicFactor", "roughnessFactor"} | ({"baseColorTexture"} if textured else set()))
+        if "baseColorTexture" in pbr:
+            info = _object(pbr["baseColorTexture"], "base color texture", {"index", "texCoord"})
+            ti = _reference(info.get("index"), document.get("textures", []), "base color texture index")
+            _integer(info.get("texCoord", 0), "texture coordinate set", 0, 0)
+            material_textures[material_index] = ti
         color = _vector(pbr.get("baseColorFactor", [1, 1, 1, 1]), 4, "base color factor", 0, 1)
         if color[3] != 1:
             _fail("base color alpha must equal one")
@@ -272,7 +288,9 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
     meshes = _array(document.get("meshes"), "meshes", 256, 1)
     positions: dict[int, list[tuple]] = {}
     used_accessors: set[int] = set()
-    used_views: set[int] = set()
+    used_views: set[int] = set(texture_info["image_views"])
+    used_textures: set[int] = set()
+    checked_uvs: set[int] = set()
     checked_normals: set[int] = set()
     mesh_data = []
     stored_triangles = 0
@@ -280,6 +298,8 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
 
     def values(ai):
         start, stride, count, fmt, _, _, vi = layouts[ai]
+        if vi in texture_info["image_views"]:
+            _fail("image bufferView cannot be used by an accessor")
         used_accessors.add(ai)
         used_views.add(vi)
         for i in range(count):
@@ -293,7 +313,7 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
             _object(primitive, "primitive", {"attributes", "indices", "material", "mode"})
             if _integer(primitive.get("mode", 4), "primitive mode", 0, 6) != 4:
                 _fail("only TRIANGLES primitives are supported")
-            attributes = _object(primitive.get("attributes"), "attributes", {"POSITION", "NORMAL"})
+            attributes = _object(primitive.get("attributes"), "attributes", {"POSITION", "NORMAL"} | ({"TEXCOORD_0"} if textured else set()))
             pi = _reference(attributes.get("POSITION"), accessors, "POSITION accessor")
             if layouts[pi][4:6] != (5126, "VEC3"):
                 _fail("POSITION must be float32 VEC3")
@@ -329,8 +349,22 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
                         if any(not math.isfinite(v) for v in normal) or not 0.99 <= sum(v*v for v in normal) <= 1.01:
                             _fail("NORMAL must contain finite normalized vectors")
                     checked_normals.add(ni)
+            if "TEXCOORD_0" in attributes:
+                ui = _reference(attributes["TEXCOORD_0"], accessors, "TEXCOORD_0 accessor")
+                if layouts[ui][4:6] != (5126, "VEC2") or layouts[ui][2] != vertex_count:
+                    _fail("TEXCOORD_0 must be float32 VEC2 with the POSITION count")
+                if views[layouts[ui][6]].get("target", 34962) != 34962:
+                    _fail("TEXCOORD_0 must use ARRAY_BUFFER")
+                if ui not in checked_uvs:
+                    if any(not math.isfinite(v) or abs(v) > 10000 for uv in values(ui) for v in uv):
+                        _fail("TEXCOORD_0 must contain finite bounded coordinates")
+                    checked_uvs.add(ui)
             if "material" in primitive:
-                _reference(primitive["material"], materials, "primitive material")
+                mi = _reference(primitive["material"], materials, "primitive material")
+                if mi in material_textures:
+                    if "TEXCOORD_0" not in attributes:
+                        _fail("textured primitive requires TEXCOORD_0")
+                    used_textures.add(material_textures[mi])
             if "indices" in primitive:
                 ii = _reference(primitive["indices"], accessors, "index accessor")
                 if layouts[ii][5] != "SCALAR" or layouts[ii][4] not in (5121, 5123, 5125):
@@ -372,6 +406,9 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
         mesh_data.append((total_vertices, total_triangles, primitive_positions))
     if len(used_accessors) != len(accessors) or len(used_views) != len(views):
         _fail("unused accessors or bufferViews are unsupported")
+
+    if used_textures != set(range(texture_info["texture_count"])):
+        _fail("unused textures are unsupported")
 
     nodes = _array(document.get("nodes"), "nodes", 256, 1)
     scenes = _array(document.get("scenes"), "scenes", 1, 1)
@@ -455,9 +492,15 @@ def validate_glb(payload: bytes, *, profile: str = "standard") -> dict:
     if any(abs(actual - expected) > NORMALIZATION_TOLERANCE
            for actual, expected in zip(bounds_min + bounds_max, expected_min + expected_max)):
         _fail("world bounds must be bottom-centered and normalized to [-.5, 0, -.5] / [.5, 1, .5]")
-    return {"format": "glb", "validation_profile": "canvaslab-static-component-v1", "budget_profile": profile,
+    texture_metadata = {}
+    if texture_info["texture_count"] or checked_uvs:
+        texture_metadata = {"texture_profile": texture_profile,
+                            "texture_count": texture_info["texture_count"],
+                            "texture_pixels": texture_info["texture_pixels"],
+                            "images": texture_info["images"]}
+    return {"format": "glb", "validation_profile": "canvaslab-static-component-v2" if texture_metadata else "canvaslab-static-component-v1", "budget_profile": profile,
             "sha256": hashlib.sha256(payload).hexdigest(), "byte_length": len(payload),
             "triangles": triangles, "vertices": vertices, "stored_vertices": stored_vertices,
             "mesh_count": len(meshes), "node_count": len(nodes), "material_count": len(materials),
             "bounds": {"min": bounds_min, "max": bounds_max},
-            "normalization_tolerance": NORMALIZATION_TOLERANCE}
+            "normalization_tolerance": NORMALIZATION_TOLERANCE, **texture_metadata}
