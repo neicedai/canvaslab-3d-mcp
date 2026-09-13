@@ -133,7 +133,7 @@ class ComponentTests(unittest.TestCase):
             record = self.lib.generate({"template": "cargo_crate", "detail": 3}, "showcase")
             self.assertEqual(record["geometry"]["budget_profile"], "showcase")
             self.assertEqual(validator.call_count, 3)
-            self.assertTrue(all(call.kwargs == {"profile": "showcase"} for call in validator.call_args_list))
+            self.assertTrue(all(call.kwargs == {"profile": "showcase", "texture_profile": "embedded-png-v1"} for call in validator.call_args_list))
 
     def test_showcase_scene_budget_counts_every_instance_and_sign(self):
         a = self.create()
