@@ -1,20 +1,64 @@
-# CanvasLab image-to-web workflow
+# CanvasLab 3D: source-faithful reconstruction
 
-- After plan validation, call MCP `generate_reference_web` to obtain deterministic HTML/CSS and the measured reference layout. Start implementation from those returned files and retain their signed build marker, unchanged `build-manifest.json` and every `data-reference-id`; never replace them with another theme's shared CSS or composition. Keep generated files in a new job-scoped directory. It is a fixed-composition reference skeleton, not a complete responsive app.
-- Run `npm run capture-reference -- <pageUrl> <reference-layout.json> <screenshot.png> <observed.json>` so real Chrome verifies the generated files, measures the DOM and captures the exact canvas in one pass. Then call `begin_reference_visual_audit` with that observation and the same screenshot. It issues a one-use session only when the URL, signed build, identity, geometry and screenshot digest pass. Manually constructed observation JSON is not valid audit provenance.
-- After every desktop implementation pass, inspect the original and the exact capture bound to the session, write structured model findings (`area`, `difference`, `severity`, `planned_fix`), and call MCP `audit_reference_screenshot` with that same screenshot. When it returns `requires_revision=true`, fix the listed differences and worst regions, obtain a new capture-bound session, then repeat with `iteration+1`, `changes_since_previous` and `previous_audit_id`. After desktop acceptance call `complete_reconstruction_review` with reviewed mobile screenshots and passing evidence for every generated control. Report completion only when `get_reconstruction_status.workflow_complete=true` and record both certificates.
+This repository is the independent 3D MCP prototype (`server3d`, `runtime3d`,
+`scripts3d`). The former 2D image-to-web instructions do not apply here. Do not
+call nonexistent 2D reconstruction tools or use a full reference-image plane as
+a substitute for a three-dimensional scene.
 
-- Follow the versioned `reconstruction_contract` returned by MCP `get_ui_build_handoff`. Default mode is reference-faithful, not free redesign. Before coding save `reconstruction-plan.json` with the job ID, reference dimensions, measured native-coordinate region boxes, asset strategies and real HTML controls. Preserve section order, column proportions, card orientation, colors and spacing unless the user explicitly requests changes.
-- Call MCP `validate_reconstruction_plan(job_id, plan)` before implementation and resolve all errors. Use its required layer IDs for illustration coverage. Passing only validates plan structure/geometry, not screenshot fidelity or actual implementation adherence.
-- Require `ready_for_implementation=true`. HTML strategies require declared HTML text/controls; artwork-only plans are preview-only. Plan at least 90% of the canvas by union area, including background/spacing regions as needed. This coverage threshold is a completeness heuristic, not proof of visual fidelity. The split script prints the contract and required next steps; asset import is not implementation approval.
-- Before claiming completion save `visual-review.md` with desktop/mobile viewport sizes and screenshot paths, observed differences, tested controls, rasterized text and demo-only limitations. Missing checks, failed controls, absent certificates or major remaining differences must be reported as incomplete, not silently accepted. These are required agent instructions, not an automatic pixel-perfect guarantee.
+## Reference workflow
 
-- Keep original generated images at their native resolution. Never shrink images to fit base64 into a model tool call.
-- For local files run `node scripts/split-image.mjs <image-path>` from this workspace. It reads bytes locally, calls MCP submit/status/handoff, downloads the archive, validates dimensions and imports a job-scoped asset directory. A failure must be diagnosed, not hidden by a thumbnail retry.
-- Keep manifest geometry and images from the same job together. Never combine generic layer filenames from different jobs. Use `public/storybook/jobs/<jobId>/` and the matching manifest.
-- This workspace is shared by tasks. Inspect `src/main.tsx` before changing entry points. A different Vite port or query string does not create an isolated project or route.
-- Preserve full illustration regions (background plus intersecting masks), rather than substituting emoji, gradients or symbols for the reference's complex artwork. Compose real HTML controls and text around illustration regions.
-- A complete image under hotspots is a visual preview, not a finished application. Explicitly state any rasterized hero typography or demo-only content remaining.
-- Verify screenshots against the generated reference at desktop and mobile sizes. Build success and DOM text alone are insufficient. Test search, filters and controls. Report segmentation artifacts honestly.
-- Use `src/LayerRegion.tsx` for illustration-region reconstruction: pass the matching manifest and a native-coordinate `[x,y,width,height]` box. It restores the background AND every intersecting visible mask. Do not render `background.png` alone as finished artwork, or enlarge `source.png` with transform/object-position to approximate individual book covers.
-- Measure the reference layout before coding: preserve landscape/portrait card orientation, column proportions and the complete hero composition. `src/App.tsx` is the corrected starlight example; `src/StarlightPrevious.tsx` is a retained failure example, not a template.
+- Inspect the original image at native resolution. Retain its digest and crop;
+  never downsample merely to fit a tool call. Measured and inferred information
+  must remain distinguishable, especially on occluded/back-facing surfaces.
+- Read the runtime status and strict scene/component contracts before proposing
+  a plan. Save native-coordinate source annotations, validate the plan, build
+  from its returned ID, and capture that exact immutable build.
+- For NEW reference-faithful plans, explicitly set `appearance_mode: "reference"`.
+  Keep `render_quality` independent: `showcase` increases budgets/sampling but
+  must not authorize invented color grading, vegetation, material textures,
+  environment lighting or decorative geometry. See
+  `docs/reference-fidelity-foundation.md` for the first-stage contract.
+- Omitted appearance mode means `legacy` for backward compatibility. Migrating
+  an existing scene changes appearance and crop framing; recalibrate and capture
+  again rather than mixing old screenshots or audits with the new mode.
+- In reference mode, author bounded `reference_lighting` from evidence where
+  possible. Defaults are only a neutral starting point, not a recovered light
+  field. Dusk is an inferred variation, not reference evidence.
+- Correct camera/composition first, then silhouettes/occlusion, proportions,
+  internal structure, materials and lighting. Increasing template detail or
+  triangle count is not proof that any of those differences were corrected.
+- Both camera fitters remain advisory and orthographic. Preserve the current
+  appearance mode and native crop when fitting. Apply a proposal only via a new
+  validated plan, then rebuild and recapture; do not edit generated scene JS.
+- Review the source and fresh original-view capture together, plus close-ups
+  and alternate views. Retain per-object differences and executable next steps.
+  A lower image error must not be achieved with foreground reference billboards
+  or by changing source annotations to fit a generated model.
+
+## Asset and execution boundaries
+
+- Only managed recipes and registered immutable components are accepted. Do not
+  enable arbitrary Python/shell scripts, untrusted .blend uploads, external
+  texture URLs or general-purpose model imports to bypass the asset contract.
+- The texture foundation accepts tightly bounded embedded PNG base-color maps
+  with verified float UVs. It does NOT yet unwrap or bake reference pixels, infer
+  geometry from an image, or reconstruct hidden surfaces automatically.
+- Preserve content hashes, plan revisions, idempotency, capture signatures,
+  budgets, provenance and no-production-certificate limitations. Higher texture
+  or geometry resolution does not remove those requirements.
+- Server/runtime changes require a new runtime build and process restart. Never
+  relabel old generated artifacts as having been built with new code.
+
+## Verification and changes
+
+- Work on a separate branch and review changes before merging. Preserve unrelated
+  user modifications and immutable generated outputs.
+- Run backend tests with `python -m unittest discover -s server3d/tests` and
+  runtime tests with `npm test` from `runtime3d`; run `npm run build` there before
+  a real capture. Record exactly which tests ran and any unavailable dependency.
+- Test reference/legacy modes at standard/showcase quality, texture decode
+  failures, source-aspect camera calibration, day/dusk/reset, diagnostics and
+  movement. Validate a real textured component in the pinned Three.js runtime.
+- Report unit-test, browser, Blender and source-visual evidence separately.
+  Synthetic fixtures and successful builds are not reconstruction acceptance.
+  Do not claim full completion while major source-visible differences remain.
