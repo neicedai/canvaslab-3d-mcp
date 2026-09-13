@@ -6,6 +6,7 @@ import {enhanceRiverWater} from './river-water.js';
 import {enhanceShowcaseMaterials,createShowcaseEnvironment} from './showcase-materials.js';
 import {createShowcaseComposite} from './showcase-composite.js';
 import {resolveAppearance,referenceLightState} from './reference-appearance.js';
+import {createSurfaceProjection} from './source-projection.js';
 
 async function start(){
   const [plan,manifest,analysis]=await Promise.all(['scene.json','build-manifest.json','reference-annotations.json'].map(async n=>{const r=await fetch(`./${n}`);if(!r.ok)throw new Error(`Missing ${n}`);return r.json();}));
@@ -67,13 +68,14 @@ async function start(){
   controls.addEventListener('change',()=>{renderDirty=true;});
   const homeTheta=Math.atan2(homeCamera.x-target.x,homeCamera.z-target.z),angle=T.MathUtils.degToRad(plan.view_angle_degrees);
   controls.minAzimuthAngle=homeTheta-angle;controls.maxAzimuthAngle=homeTheta+angle;
+  let surfaceProjection=null;
   let captureMode=false,playing=false,elapsed=0,dusk=false,selected='',drag=null,last=0;
   const offsets=new Map(plan.objects.filter(x=>x.movement).map(x=>[x.id,new T.Vector3()]));
   const select=document.querySelector('#object');
   for(const x of plan.objects.filter(x=>x.movement)){const option=document.createElement('option');option.value=x.id;option.textContent=x.label;select.append(option);}
   function fit(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);const aspect=w/h;if(camera.isOrthographicCamera){const half=plan.camera.vertical_span/2*Math.max(1,appearance.framingAspect/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;}else{camera.aspect=aspect;camera.fov=T.MathUtils.radToDeg(2*Math.atan(Math.tan(T.MathUtils.degToRad(plan.camera.fov)/2)*Math.max(1,appearance.framingAspect/aspect)));}camera.updateProjectionMatrix();renderDirty=true;}
   function resetCamera(){const damping=controls.enableDamping;controls.enableDamping=false;controls.update();camera.position.copy(homeCamera);camera.zoom=1;camera.lookAt(target);controls.target.copy(target);camera.updateProjectionMatrix();controls.update();controls.enableDamping=damping;}
-  function light(on){dusk=on;scene.background.set(on?'#364b55':plan.background);
+  function light(on){dusk=on;surfaceProjection?.setDusk(on);scene.background.set(on?'#364b55':plan.background);
     if(reference){const cfg=referenceLightState(appearance.lighting,on);sun.intensity=cfg.sun_intensity;hemi.intensity=cfg.hemisphere_intensity;sun.color.set(cfg.sun_color);}
     else{sun.intensity=showcase?(on?.48:3.3):(on?.75:3.1);hemi.intensity=showcase?(on?.48:.90):(on?1:2.3);sun.color.set(on?'#a8c4ef':showcase?'#fff0d3':'#ffebc5');}
     if(stylized){scene.environmentIntensity=on?.18:.40;craft.setDusk(on);for(const node of nodes.values())node.userData.setWaterDusk?.(on);scene.userData.canvaslabWaterRevision=(scene.userData.canvaslabWaterRevision||0)+1;}
@@ -103,12 +105,14 @@ async function start(){
   document.querySelector('#iso').addEventListener('click',()=>{motion(false);projection('orthographic');});
   document.querySelector('#perspective').addEventListener('click',()=>{motion(false);projection('perspective');});
   addEventListener('resize',fit);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();showError('图形上下文已丢失，请刷新页面。');});
-  fit();resetCamera();motion(false);await document.fonts.ready;await renderer.compileAsync(scene,camera);renderScene();
+  fit();resetCamera();motion(false);await document.fonts.ready;
+  surfaceProjection=await createSurfaceProjection(renderer,scene,nodes,plan,analysis,manifest);
+  await renderer.compileAsync(scene,camera);renderScene();
   function objectInfo(){scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);const w=canvas.width/renderer.getPixelRatio(),h=canvas.height/renderer.getPixelRatio(),out={};
     for(const [id,node] of nodes){const box=new T.Box3().setFromObject(node),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera));
       const visible=points.some(p=>p.z>=-1&&p.z<=1);const xs=points.map(p=>(p.x+1)*w/2),ys=points.map(p=>(1-p.y)*h/2);
       out[id]={position:node.position.toArray(),quaternion:node.quaternion.toArray(),component:componentInstanceInfo(node),world_box:[box.min.toArray(),box.max.toArray()],screen_box:visible?[Math.min(...xs),Math.min(...ys),Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys)]:null};}return out;}
-  function snapshot(){renderScene();return {build_id:manifest.build_id,objects:objectInfo(),camera:{position:camera.position.toArray(),target:controls.target.toArray(),projection:camera.projectionMatrix.toArray()},playing,time:elapsed,dusk,selected,render_quality:plan.render_quality||'standard',appearance_mode:appearance.mode,lighting_variant:reference?(dusk?'inferred-dusk':'reference'):'legacy',material_families:craft?.families,local_lights:craft?.lightCount||0,helper_triangles:helperTriangles,draw_calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,webgl_version:renderer.getContext().getParameter(renderer.getContext().VERSION)};}
+  function snapshot(){renderScene();return {build_id:manifest.build_id,objects:objectInfo(),camera:{position:camera.position.toArray(),target:controls.target.toArray(),projection:camera.projectionMatrix.toArray()},playing,time:elapsed,dusk,selected,render_quality:plan.render_quality||'standard',appearance_mode:appearance.mode,source_projection:surfaceProjection?.snapshot()??null,lighting_variant:reference?(dusk?'inferred-dusk':'reference'):'legacy',material_families:craft?.families,local_lights:craft?.lightCount||0,helper_triangles:helperTriangles,draw_calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,webgl_version:renderer.getContext().getParameter(renderer.getContext().VERSION)};}
   function prepare({yaw=0,time=0,night=false,zoom=1}={}){if(!Number.isFinite(yaw)||Math.abs(yaw)>plan.view_angle_degrees)throw new Error('View outside contract');if(!Number.isFinite(zoom)||zoom<1||zoom>2.2)throw new Error('Capture zoom must be between 1 and 2.2');captureMode=true;document.body.dataset.capture='true';finish(true);reset();captureMode=true;renderer.setPixelRatio(1);fit();controls.enableDamping=false;controls.enabled=false;elapsed=time;sample(time);light(night);const offset=homeCamera.clone().sub(target).applyAxisAngle(new T.Vector3(0,1,0),T.MathUtils.degToRad(yaw));camera.position.copy(target).add(offset);camera.zoom=zoom;camera.updateProjectionMatrix();camera.lookAt(target);camera.updateMatrixWorld(true);renderScene();return snapshot();}
   function diagnostic(mode){if(!['id','depth'].includes(mode))throw new Error('Unknown diagnostic mode');const saved=[],helperVisibility=[],background=scene.background,tm=renderer.toneMapping,space=renderer.outputColorSpace,shadow=renderer.shadowMap.enabled,oldTarget=renderer.getRenderTarget();
     // Main canvas MSAA blends neighboring IDs into other valid object IDs.
@@ -127,7 +131,7 @@ async function start(){
   window.canvaslab3d={ready:true,buildId:manifest.build_id,idEncoding:'rgb-index-v2-no-msaa',referenceSize:analysis.scene_box.slice(2),snapshot,prepare,diagnostic,
     interactive(){captureMode=false;document.body.dataset.capture='false';controls.enabled=true;controls.enableDamping=true;renderer.setPixelRatio(Math.min(devicePixelRatio,showcase?2:1.5));reset();},
     objectIds:plan.objects.map(x=>x.id),movableIds:plan.objects.filter(x=>x.movement).map(x=>x.id)};
-  document.querySelector('#status').textContent=`${plan.objects.length} 个真实三维对象 · 可交互开发预览`;
+  document.querySelector('#status').textContent=`${plan.objects.length} 个真实三维对象 · 可交互开发预览${surfaceProjection?' · 原图外观投影（暮色为推断）':''}`;
   function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;if(captureMode||document.hidden)return;if(playing){elapsed+=dt;sample(elapsed);if(river){const offset=homeCamera.clone().sub(target).applyAxisAngle(new T.Vector3(0,1,0),Math.sin(elapsed*.16)*.35);camera.position.copy(target).add(offset);camera.lookAt(target);}}controls.update();if(!showcase||playing||renderDirty)renderScene();}requestAnimationFrame(animate);
 }
 function showError(message){const el=document.querySelector('#error');el.hidden=false;el.textContent=`无法加载三维场景：${message}`;document.querySelector('#status').textContent='渲染失败，未通过检查';}
