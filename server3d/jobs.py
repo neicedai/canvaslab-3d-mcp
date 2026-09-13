@@ -342,6 +342,8 @@ class Store:
             result["reference_fidelity_contract"] = {
                 "version": "source-led-3d-v1",
                 "objective": "Match the original image, not the highest implemented preset",
+                "new_scene_appearance_mode": "reference",
+                "appearance_guidance": "Set appearance_mode=reference explicitly for new reconstructions. Quality controls sampling/budgets, not automatic material or lighting restyling. Recalibrate when migrating a legacy scene.",
                 "repair_order": ["camera_and_composition", "silhouette_and_occlusion", "component_proportions",
                                  "geometry_details", "materials_and_lighting", "water_and_atmosphere"],
                 "required_comparisons": ["same-native-size original and reference capture together",
@@ -379,7 +381,8 @@ class Store:
                         not sx <= pixel[0] <= sx+sw or not sy <= pixel[1] <= sy+sh):
                     raise ValueError("Landmark pixels must be native coordinates inside the original scene crop")
                 mark["pixel"] = [pixel[0]-sx, pixel[1]-sy]
-            proposal = fit_orthographic_landmarks([sw, sh], local, plan["camera"])
+            proposal = fit_orthographic_landmarks([sw, sh], local, plan["camera"],
+                                                  framing_aspect=sw/sh if plan.get("appearance_mode") == "reference" else 1.45)
             proposed_plan = copy.deepcopy(plan)
             proposed_plan["camera"] = proposal["suggested_camera"]
             validate_plan(proposed_plan, analysis)
@@ -476,7 +479,8 @@ class Store:
                 "supported": ["original_upload", "versioned_analysis", "validated_scene_plan", "procedural_build",
                               "zip_export", "local_capture", "diagnostic_audit", "visible_silhouette_metrics",
                               "orthographic_camera_proposal", "manual_landmark_camera_fit", "source_led_fidelity_contract",
-                              "versioned_scene_handoff", "blender_components", "registered_glb_composition"],
+                              "versioned_scene_handoff", "blender_components", "registered_glb_composition",
+                              "reference_appearance_mode", "bounded_embedded_png_components"],
                 "unsupported": ["production_certificates", "remote_worker_registration", "silhouette_acceptance",
                                 "automatic_image_to_mesh", "whole_scene_glb_export", "full_collision_detection"],
                 "blender": self.components.status(), "workflow_complete": False}
