@@ -1,0 +1,56 @@
+name: Validate 3D reconstruction
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-3d-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install the declared Python dependencies
+        id: install
+        run: |
+          python3 --version
+          python3 -m venv .ci-venv
+          .ci-venv/bin/python -m pip install -r server3d/requirements.txt
+          .ci-venv/bin/python -m pip check
+      - name: Compile Python sources
+        run: .ci-venv/bin/python -m compileall -q server3d scripts3d
+      - name: Run backend regression tests
+        run: .ci-venv/bin/python -m unittest discover -s server3d/tests -v
+
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: runtime3d
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install the exact runtime lockfile
+        id: install
+        run: |
+          node --version
+          npm --version
+          npm ci
+      - name: Test the actual runtime dependencies
+        run: npm test
+      - name: Build the actual Three.js runtime
+        if: always() && steps.install.outcome == 'success'
+        run: npm run build
