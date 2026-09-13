@@ -16,7 +16,10 @@ class McpTests(unittest.IsolatedAsyncioTestCase):
             asset = store.upload(image.getvalue())
             async with Client(create_mcp(store)) as client:
                 tools = await client.list_tools()
-                self.assertEqual(len(tools.tools), 18)
+                names = [tool.name for tool in tools.tools]
+                self.assertEqual(len(names), len(set(names)))
+                self.assertTrue({"measure_scene_fidelity", "refine_scene_component",
+                                 "suggest_component_deformation", "compare_scene_candidate"}.issubset(names))
                 self.assertIn("fit_scene_landmarks", [tool.name for tool in tools.tools])
                 self.assertTrue(all(t.output_schema is not None for t in tools.tools))
                 state = await client.call_tool("scene_runtime_status", {})
