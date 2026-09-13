@@ -14,6 +14,7 @@ from .scene_schema import ScenePlan, Analysis
 from .component_schema import ComponentRecipe, COMPONENT_CONTRACT, COMPONENT_TEMPLATES
 from .deformation_fit import suggest_deformation_handles
 from .fidelity_compare import evaluate_scene_candidate
+from .refinement import install_refinement_tools
 
 
 def expected(function, *args):
@@ -30,6 +31,10 @@ def create_mcp(store: Store):
         "validate and persist a scene plan, then build from that plan ID. Never invent observation evidence. "
         "No production fidelity/completion certificates are supported yet. Generated scenes are previews. "
         "Call scene_runtime_status before testing and retain exact source/build/capture versions. "
+        "Use appearance_mode=reference for source-led jobs. measure_scene_fidelity compares original "
+        "color, edges and fine detail and returns native worst-patch coordinates. With supplied source "
+        "landmarks and a current audit, refine_scene_component runs bounded isolated candidate trials; "
+        "it never replaces the original job or certifies a result. "
         "Reference fidelity is the objective, not a detail preset. First match camera projection, "
         "silhouettes, relative proportions, placement and occlusion against the ORIGINAL, then "
         "refine geometry, surface materials, lighting and water. A preset is never an absolute quality ceiling. "
@@ -41,7 +46,10 @@ def create_mcp(store: Store):
     @mcp.tool(structured_output=True)
     def scene_runtime_status() -> dict[str, Any]:
         """Report exact runtime fingerprints, supported features and explicit development limitations."""
-        return store.status()
+        status = store.status()
+        status["supported"] += ["native_reference_appearance_metrics", "cross_job_verified_fidelity_comparison",
+                                "joint_deformation_fit", "bounded_child_job_refinement_trials"]
+        return status
 
     @mcp.tool(structured_output=True)
     def get_scene_contract() -> dict[str, Any]:
@@ -170,10 +178,11 @@ def create_mcp(store: Store):
 
     @mcp.tool(structured_output=True)
     def compare_scene_candidate(job_id: str, capture_id: str, baseline_audit_id: str) -> dict[str, Any]:
-        """Compare a new signed capture to a prior audited build using source-visible silhouettes.
+        """Compare signed captures using source silhouettes, color, edges and fine detail.
 
-        The baseline and candidate must belong to the same job and exact source
-        annotations. A critical-region regression cannot be hidden by a higher
+        Cross-job comparison requires identical source SHA256, crop, measured
+        regions, holes and confidence. Historical baseline evidence is reverified
+        and recomputed. A critical-region regression cannot be hidden by a higher
         global mean. The result is only prefer_candidate / rollback_recommended /
         inconclusive; it never accepts, publishes or certifies a reconstruction.
         """
@@ -204,6 +213,7 @@ def create_mcp(store: Store):
         """Cancel future work/publication for this job, retaining existing files. Running capture drains."""
         return expected(store.cancel, job_id)
 
+    install_refinement_tools(mcp, store, expected)
     return mcp
 
 
