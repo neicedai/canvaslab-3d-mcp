@@ -17,6 +17,7 @@ from .glb_validation import glb_limits, validate_glb
 from .scene_schema import primitive_triangle_budget, scene_budgets
 
 WORKER = REPO / "scripts3d" / "blender_components.py"
+DEFORMER = REPO / "scripts3d" / "blender_deform.py"
 
 
 def configured_blender():
@@ -54,6 +55,7 @@ class ComponentLibrary:
         try:
             identity = self.engine_identity()
             return {"available":True,**identity,"recipe_worker_sha256":sha(WORKER.read_bytes()),
+                    "deformation_worker_sha256":sha(DEFORMER.read_bytes()),
                     "templates":list(COMPONENT_TEMPLATES),
                     "arbitrary_script_input":False,"untrusted_model_import":False,"gpu_inference_required":False}
         except (ValueError,FileNotFoundError) as exc:
@@ -84,7 +86,8 @@ class ComponentLibrary:
         blend_limit = (128 if data["detail"] == 3 else 64) * 1024 * 1024
         identity = self.engine_identity()
         worker_bytes = WORKER.read_bytes()
-        fingerprint = sha(canonical([data,identity,sha(worker_bytes)]))
+        deformer_bytes = DEFORMER.read_bytes()
+        fingerprint = sha(canonical([data,identity,sha(worker_bytes),sha(deformer_bytes)]))
         lease = uuid.uuid4().hex
         with self.store.transaction() as db:
             prior = self.store.retry(db,"component",idempotency_key,fingerprint)
@@ -111,12 +114,16 @@ class ComponentLibrary:
             work.mkdir(parents=True,exist_ok=False)
             recipe_path = work / "recipe.json"
             recipe_path.write_bytes(canonical(data))
+            base_recipe_path = work / "base-recipe.json"
+            base_recipe_path.write_bytes(canonical({k:v for k,v in data.items() if k != "deformation_handles"}))
             fixed_script = work / "worker.py"
             fixed_script.write_bytes(worker_bytes)
+            fixed_deformer = work / "deformer.py"
+            fixed_deformer.write_bytes(deformer_bytes)
             output = work / "output"
             flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
             args = [str(configured_blender()),"--background","--factory-startup","--disable-autoexec",
-                    "--threads","1","--python-exit-code","1","--python",str(fixed_script),"--",str(recipe_path),str(output)]
+                    "--threads","1","--python-exit-code","1","--python",str(fixed_script),"--",str(base_recipe_path),str(output)]
             env = os.environ.copy()
             for name in list(env):
                 if name.startswith("PYTHON") or name.startswith("BLENDER_USER_") or name.startswith("BLENDER_SYSTEM_") or name in {"CANVASLAB3D_TOKEN"}:
@@ -130,6 +137,18 @@ class ComponentLibrary:
             (work/"worker.log").write_text(result.stdout+"\n"+result.stderr,encoding="utf-8")
             if result.returncode:
                 raise ValueError("Blender generation failed; see managed worker.log. No component was published")
+            if data.get("deformation_handles"):
+                deform_args = [str(configured_blender()),"--background","--factory-startup","--disable-autoexec",
+                               "--threads","1","--python-exit-code","1","--python",str(fixed_deformer),"--",
+                               str(recipe_path),str(output)]
+                try:
+                    deformed = subprocess.run(deform_args,capture_output=True,text=True,encoding="utf-8",errors="replace",
+                                              timeout=120,shell=False,creationflags=flags,env=env)
+                except subprocess.TimeoutExpired as exc:
+                    raise ValueError("Blender deformation timed out; failed job retained, no asset published") from exc
+                (work/"deformer.log").write_text(deformed.stdout+"\n"+deformed.stderr,encoding="utf-8")
+                if deformed.returncode:
+                    raise ValueError("Blender deformation failed; see managed deformer.log. No component was published")
             required = ["component.glb","component.blend","metadata.json"]
             if any(not (output/n).is_file() for n in required):
                 raise ValueError("Blender output is incomplete")
@@ -144,7 +163,7 @@ class ComponentLibrary:
             asset_id = sha(payload)
             files = {n:sha((output/n).read_bytes()) for n in required}
             record = {"asset_id":asset_id,"template":data["template"],"recipe":data,"recipe_fingerprint":fingerprint,
-                      "blender":identity,"worker_sha256":sha(worker_bytes),"geometry":measured,"files":files,
+                      "blender":identity,"worker_sha256":sha(worker_bytes),"deformer_sha256":sha(deformer_bytes),"geometry":measured,"files":files,
                       "bytes":len(payload),"natural_dimensions":natural,"origin":"managed_blender_recipe","material_policy":"authored_opaque_pbr",
                       "coordinate_system":"y-up-front-positive-z-bottom-center-unit-bounds","preview_only":True,
                       "downloads":{"glb":f"/components/{asset_id}/glb","blend":f"/components/{asset_id}/blend"}}
