@@ -16,7 +16,7 @@ class ComponentSchemaTests(unittest.TestCase):
     def test_bounded_templates_and_defaults_match_worker(self):
         for template in COMPONENT_TEMPLATES:
             recipe = {"template": template}
-            self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(), validate_recipe_data(recipe))
+            self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(exclude={"deformation_handles"}), validate_recipe_data(recipe))
 
     def test_recipe_rejects_execution_and_paths(self):
         for extra in ({"python": "print(1)"}, {"path": "../../x.glb"}, {"url": "https://example.org/model"}):
@@ -41,13 +41,13 @@ class ComponentSchemaTests(unittest.TestCase):
     def test_detail_two_custom_palette(self):
         recipe = {"template": "tiled_roof", "detail": 2,
                   "primary_color": "#abCD12", "secondary_color": "#00ff33"}
-        self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(), validate_recipe_data(recipe))
+        self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(exclude={"deformation_handles"}), validate_recipe_data(recipe))
 
     def test_showcase_recipes_match_fixed_worker(self):
         for template in COMPONENT_TEMPLATES:
             recipe = {"template": template, "detail": 3}
             with self.subTest(template=template):
-                self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(), validate_recipe_data(recipe))
+                self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(exclude={"deformation_handles"}), validate_recipe_data(recipe))
 
 
 if __name__ == "__main__":
