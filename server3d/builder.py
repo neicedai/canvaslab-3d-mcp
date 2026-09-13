@@ -36,7 +36,7 @@ def runtime_files(runtime: Path | None = None) -> dict[str, bytes]:
     return files
 
 
-def build_files(plan: dict, source: dict, analysis: dict, job_id: str, plan_id: str, components: dict | None = None) -> tuple[str, dict, dict]:
+def build_files(plan: dict, source: dict, analysis: dict, job_id: str, plan_id: str, components: dict | None = None, *, source_bytes: bytes | None = None) -> tuple[str, dict, dict]:
     files = dict(runtime_files())
     components = components or {}
     for asset_id, asset in components.items():
@@ -45,6 +45,9 @@ def build_files(plan: dict, source: dict, analysis: dict, job_id: str, plan_id: 
         files[f"component-{asset_id}.glb"] = asset["bytes"]
     if components:
         files["components.json"] = canonical({identity:value["record"] for identity,value in components.items()})
+    if plan.get("reference_projection"):
+        from .source_projection import projection_assets
+        files.update(projection_assets(plan, source, analysis, source_bytes))
     files["scene.json"] = canonical(plan)
     files["reference-annotations.json"] = canonical(analysis)
     manifest = {
