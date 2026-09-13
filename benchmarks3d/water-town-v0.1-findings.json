@@ -1,0 +1,80 @@
+[
+  {
+    "object_id": "overall",
+    "severity": "major",
+    "difference": "整体体块可辨认，但相机、留白、建筑间距和原图不一致；当前只是简化的立体原型。",
+    "planned_fix": "先做相机拟合和关键区域轮廓标注，再逐物件迭代；不签发完成证书。"
+  },
+  {
+    "object_id": "water",
+    "severity": "major",
+    "difference": "水面是单色平板加短线，缺少原图的涟漪、层次和倒影。",
+    "planned_fix": "保留真实水面几何，加入受控水色与细节材质参数。"
+  },
+  {
+    "object_id": "quay",
+    "severity": "major",
+    "difference": "码头平台过于空旷，没有原图石砖、台阶和围栏。",
+    "planned_fix": "新增台阶、石砖、栏杆组件并按原图定位。"
+  },
+  {
+    "object_id": "inn",
+    "severity": "major",
+    "difference": "主楼只剩规则窗格，缺少入口、门廊、招牌、瓦片和复杂梁柱。",
+    "planned_fix": "扩展可参数化门廊、门窗、梁柱和瓦片组件。"
+  },
+  {
+    "object_id": "gate",
+    "severity": "major",
+    "difference": "原图开放式高脚门楼被生成了封闭楼体。",
+    "planned_fix": "增加开放式柱梁门楼结构，禁止用封闭楼体替代。"
+  },
+  {
+    "object_id": "shop",
+    "severity": "major",
+    "difference": "右侧小店正面被统一窗格替代，招牌、灯笼和铺面缺失。",
+    "planned_fix": "独立定义店铺门窗和招牌区域，加入悬挂物组件。"
+  },
+  {
+    "object_id": "left-tree",
+    "severity": "major",
+    "difference": "树冠颜色和轮廓过于规则，树干和分枝不够接近原图。",
+    "planned_fix": "增加可控树冠簇、分枝与轮廓标注。"
+  },
+  {
+    "object_id": "right-tree",
+    "severity": "major",
+    "difference": "只保留单株绿色树，原图右侧浅粉树及树群层次缺失。",
+    "planned_fix": "依据逐对象标注补树群和颜色，保持遮挡关系。"
+  },
+  {
+    "object_id": "dock-left",
+    "severity": "major",
+    "difference": "栈桥太宽且简化，原图上货物和吊架均缺失。",
+    "planned_fix": "校准栈桥尺寸，补支柱、货箱和吊架。"
+  },
+  {
+    "object_id": "dock-right",
+    "severity": "major",
+    "difference": "栈桥位置与原图不同，缺货箱和岸边支撑细节。",
+    "planned_fix": "拟合投影后补木板支柱及货物。"
+  },
+  {
+    "object_id": "covered-boat",
+    "severity": "major",
+    "difference": "有立体船体和篷顶，但船型、船桨和船舷细节明显简化。",
+    "planned_fix": "细化船体截面与篷顶分段，增加船桨。"
+  },
+  {
+    "object_id": "cargo-boat",
+    "severity": "major",
+    "difference": "左船缺少原图帆和货物，船体偏扁。",
+    "planned_fix": "增加桅杆帆面组件，拟合船体截面并填充货物。"
+  },
+  {
+    "object_id": "crate",
+    "severity": "minor",
+    "difference": "只生成一个无板缝的立方体，不能代表原图多个货箱。",
+    "planned_fix": "提供有板条的货箱组件，按标注增补实例。"
+  }
+]

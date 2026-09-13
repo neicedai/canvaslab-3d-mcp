@@ -1,0 +1,39 @@
+{
+  "source_sha256": "bfb9030897d4c18b22aa3fe5fa7eb088fd8766e96e1494487db3eaf74fb406d1",
+  "source_size": [1536, 1024],
+  "landmarks": [
+    {
+      "id": "water-left-front",
+      "world": [-7.5, 0.02, 6.2],
+      "pixel": [53.0, 612.0],
+      "measurement": "measured",
+      "evidence": "Manually measured visible left/front water-surface corner on the original native image. Corresponds to the current scene water rectangle, whose exact proportions are still an assumption."
+    },
+    {
+      "id": "water-right-front",
+      "world": [7.5, 0.02, 6.2],
+      "pixel": [1041.0, 956.0],
+      "measurement": "estimated",
+      "evidence": "Manual estimate of the nearest water-surface corner, partially covered by the bottom control bar and confused with the thickness of the water volume; not automatically detected."
+    },
+    {
+      "id": "water-right-back",
+      "world": [7.5, 0.02, -4.4],
+      "pixel": [1484.0, 565.0],
+      "measurement": "estimated",
+      "evidence": "Water corner lies under the right/rear stone platform. Estimated by extending the two visible base-edge directions through the stone boundary; image does not directly expose this point."
+    },
+    {
+      "id": "water-left-back",
+      "world": [-7.5, 0.02, -4.4],
+      "pixel": [496.0, 221.0],
+      "measurement": "estimated",
+      "evidence": "Fully occluded corner inferred as a parallelogram closure from the other three ground corners. Correlated estimate, not independent image evidence or an acceptance landmark."
+    }
+  ],
+  "limitations": [
+    "Manual calibration seed only; three corners are occluded or ambiguous.",
+    "Low fitting residual cannot establish image fidelity because the inferred fourth corner is correlated with the other estimates.",
+    "Use the resulting angle as a first build candidate, then inspect visible architecture, trees and boats separately."
+  ]
+}

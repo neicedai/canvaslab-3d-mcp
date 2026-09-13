@@ -1,0 +1,140 @@
+[
+  {
+    "object_id": "overall",
+    "severity": "major",
+    "difference": "Recognizable Qingyadu scene and controls, but flatter materials, shallow water foreground, simplified architecture and absent mist landscape remain clear differences.",
+    "planned_fix": "Refine measured camera/depth, multi-hip roof, physically based material detail and background atmosphere."
+  },
+  {
+    "object_id": "water",
+    "severity": "major",
+    "difference": "Teal volume and lily pads present; procedural cell lines look etched, lacking transparent caustics and reflected architecture.",
+    "planned_fix": "Replace stylized cells with soft layered refraction/reflection treatment and calibrate hue."
+  },
+  {
+    "object_id": "quay",
+    "severity": "major",
+    "difference": "Masonry and central stairs present; blocks are too regular, wall too clean and tall.",
+    "planned_fix": "Irregular chipped blocks, moss, correct stair and quay outline."
+  },
+  {
+    "object_id": "inn",
+    "severity": "major",
+    "difference": "Two floors, window lattices, balcony and tiles present. Gable silhouette, side facade and three front awnings remain unlike the original; no detailed interior.",
+    "planned_fix": "Build hip-gable side roof, distinct awnings, side signs and interior props."
+  },
+  {
+    "object_id": "gate",
+    "severity": "minor",
+    "difference": "Open gate restored; roof and timber proportions simplified and approach stairs differ.",
+    "planned_fix": "Refine curved ridge and native silhouette."
+  },
+  {
+    "object_id": "tea",
+    "severity": "major",
+    "difference": "Canopy, counter, cups and stools present; missing painted canopy text, bamboo side structures and woven clutter.",
+    "planned_fix": "Add independently modelled side props and correct sign placement."
+  },
+  {
+    "object_id": "tree-back",
+    "severity": "major",
+    "difference": "Canopy no longer clipped; leaf clusters remain overly polygonal and sparse.",
+    "planned_fix": "Smaller varied leaf clusters and richer branch structure."
+  },
+  {
+    "object_id": "tree-pink",
+    "severity": "minor",
+    "difference": "Pink blossom region present; blooms are clustered polyhedra rather than fine sprays.",
+    "planned_fix": "Refine twig sprays and flower scale."
+  },
+  {
+    "object_id": "tree-right",
+    "severity": "major",
+    "difference": "Right tree present but lacks original dense layered foliage and rock backing.",
+    "planned_fix": "Add natural layered foliage and rocks."
+  },
+  {
+    "object_id": "pier",
+    "severity": "minor",
+    "difference": "Independent planks and rope posts present; original narrower stepped docking arrangement differs.",
+    "planned_fix": "Match dock width and connected steps."
+  },
+  {
+    "object_id": "boat-main",
+    "severity": "major",
+    "difference": "Hollow hull and woven canopy present; basket weave too thick, shape too rectangular and lacks mooring detail.",
+    "planned_fix": "Refine pointed hull, thin weave and mooring ropes."
+  },
+  {
+    "object_id": "boat-small",
+    "severity": "minor",
+    "difference": "Hollow rowing hull and net present; shape and placement still approximate.",
+    "planned_fix": "Refine asymmetric oar and hull silhouette."
+  },
+  {
+    "object_id": "garden-left",
+    "severity": "minor",
+    "difference": "Visible potted plants and bench are reusable repeated geometry, not the original varied ferns, bamboo and jars.",
+    "planned_fix": "Replace repetitions with region-specific vegetation and vessels."
+  },
+  {
+    "object_id": "garden-front",
+    "severity": "minor",
+    "difference": "Visible potted plants and bench are reusable repeated geometry, not the original varied ferns, bamboo and jars.",
+    "planned_fix": "Replace repetitions with region-specific vegetation and vessels."
+  },
+  {
+    "object_id": "garden-right",
+    "severity": "minor",
+    "difference": "Visible potted plants and bench are reusable repeated geometry, not the original varied ferns, bamboo and jars.",
+    "planned_fix": "Replace repetitions with region-specific vegetation and vessels."
+  },
+  {
+    "object_id": "garden-inn-right",
+    "severity": "minor",
+    "difference": "Visible potted plants and bench are reusable repeated geometry, not the original varied ferns, bamboo and jars.",
+    "planned_fix": "Replace repetitions with region-specific vegetation and vessels."
+  },
+  {
+    "object_id": "garden-gate",
+    "severity": "minor",
+    "difference": "Visible potted plants and bench are reusable repeated geometry, not the original varied ferns, bamboo and jars.",
+    "planned_fix": "Replace repetitions with region-specific vegetation and vessels."
+  },
+  {
+    "object_id": "crate-0",
+    "severity": "minor",
+    "difference": "Solid cargo prop present but rectangular timber boxes substitute for woven baskets.",
+    "planned_fix": "Add wicker basket recipe and align with source."
+  },
+  {
+    "object_id": "crate-1",
+    "severity": "minor",
+    "difference": "Solid cargo prop present but rectangular timber boxes substitute for woven baskets.",
+    "planned_fix": "Add wicker basket recipe and align with source."
+  },
+  {
+    "object_id": "crate-2",
+    "severity": "minor",
+    "difference": "Solid cargo prop present but rectangular timber boxes substitute for woven baskets.",
+    "planned_fix": "Add wicker basket recipe and align with source."
+  },
+  {
+    "object_id": "inn-sign",
+    "severity": "minor",
+    "difference": "Readable Qingyadu sign restored; lettering size and board treatment differ.",
+    "planned_fix": "Adjust original sign spacing and weathered finish."
+  },
+  {
+    "object_id": "gate-sign",
+    "severity": "minor",
+    "difference": "Gate sign text restored but small and rigid.",
+    "planned_fix": "Match original sign and calligraphy proportions."
+  },
+  {
+    "object_id": "tea-sign",
+    "severity": "major",
+    "difference": "Declared tea sign is largely occluded under canopy; source text is on canopy and side banners.",
+    "planned_fix": "Reposition text surfaces to match source canopy and hanging banner."
+  }
+]

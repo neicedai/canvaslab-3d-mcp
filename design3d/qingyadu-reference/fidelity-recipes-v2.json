@@ -1,0 +1,18 @@
+{
+  "crate-0": {
+    "template": "woven_basket",
+    "detail": 3
+  },
+  "crate-1": {
+    "template": "woven_basket",
+    "detail": 3
+  },
+  "crate-2": {
+    "template": "woven_basket",
+    "detail": 3
+  },
+  "tea-rack": {
+    "template": "bamboo_rack",
+    "detail": 3
+  }
+}

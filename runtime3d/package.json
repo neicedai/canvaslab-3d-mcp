@@ -1,0 +1,18 @@
+{
+  "name": "canvaslab-3d-runtime",
+  "private": true,
+  "version": "0.3.0-dev",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@phosphor-icons/core": "2.1.1",
+    "three": "0.186.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright-core": "1.55.0"
+  }
+}

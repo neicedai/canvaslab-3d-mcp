@@ -1,0 +1,225 @@
+{
+  "assumptions": [
+    "Single viewpoint; hidden surfaces and depth remain inferred.",
+    "Original includes interface chrome; it is not geometry."
+  ],
+  "change_reason": "Separate the observed bamboo rack from the canopy instead of stretching one component over both.",
+  "regions": [
+    {
+      "box": [
+        52.0,
+        538.0,
+        1302.0,
+        447.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "water",
+      "label": "water",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        215.0,
+        390.0,
+        1275.0,
+        405.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "quay",
+      "label": "quay",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        575.0,
+        53.0,
+        601.0,
+        498.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "inn",
+      "label": "inn",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        290.0,
+        262.0,
+        240.0,
+        250.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "gate",
+      "label": "gate",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        1070.0,
+        390.0,
+        222.0,
+        235.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Re-measured the standalone cloth canopy, counter and feet; excludes the independent rack to the right.",
+      "id": "tea",
+      "label": "tea",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        504.0,
+        34.0,
+        273.0,
+        294.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "tree-back",
+      "label": "tree-back",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        374.0,
+        184.0,
+        243.0,
+        240.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "tree-pink",
+      "label": "tree-pink",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        1101.0,
+        205.0,
+        245.0,
+        244.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "tree-right",
+      "label": "tree-right",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        425.0,
+        473.0,
+        248.0,
+        155.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "pier",
+      "label": "pier",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        515.0,
+        600.0,
+        412.0,
+        215.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "boat-main",
+      "label": "boat-main",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        946.0,
+        638.0,
+        264.0,
+        165.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "boat-small",
+      "label": "boat-small",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        236.0,
+        391.0,
+        177.0,
+        178.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "garden-left",
+      "label": "garden-left",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        498.0,
+        399.0,
+        300.0,
+        124.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "garden-front",
+      "label": "garden-front",
+      "visible_polygons": []
+    },
+    {
+      "box": [
+        1216.0,
+        411.0,
+        223.0,
+        232.0
+      ],
+      "confidence": 0.75,
+      "critical": true,
+      "evidence": "Measured visible region on the newly supplied 1536x1024 Qingyadu reference, not the old phone screenshot.",
+      "id": "garden-right",
+      "label": "garden-right",
+      "visible_polygons": []
+    },
+    {
+      "id": "tea-rack",
+      "label": "独立竹架",
+      "box": [
+        1260.0,
+        410.0,
+        155.0,
+        208.0
+      ],
+      "critical": true,
+      "confidence": 0.7,
+      "evidence": "Manually observed separate bamboo poles, rolled bamboo screen and vertical tea banner to the right of the cloth stall."
+    }
+  ],
+  "scene_box": [
+    0.0,
+    0.0,
+    1536.0,
+    1024.0
+  ],
+  "source_sha256": "bfb9030897d4c18b22aa3fe5fa7eb088fd8766e96e1494487db3eaf74fb406d1"
+}

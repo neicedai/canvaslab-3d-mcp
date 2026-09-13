@@ -1,0 +1,888 @@
+{
+  "assumptions": [
+    "Detailed interactive reference study; single-image hidden surfaces are inferred.",
+    "Rendering and handwritten lettering differ from the original illustration; no completion certificate."
+  ],
+  "background": "#eee6d5",
+  "camera": {
+    "projection": "orthographic",
+    "position": [
+      10.338769785441045,
+      14.202797402294854,
+      17.33212915533966
+    ],
+    "target": [
+      0.22269727134831407,
+      1.4959908387208105,
+      1.26182598939008
+    ],
+    "vertical_span": 13.134258407562,
+    "fov": 40.0
+  },
+  "contract_version": "canvaslab-scene-v1",
+  "coordinate_system": "right-handed-y-up-relative",
+  "materials": [
+    {
+      "color": "#795a39",
+      "id": "wood",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#3c8b85",
+      "id": "water",
+      "metalness": 0.0,
+      "roughness": 0.23
+    },
+    {
+      "color": "#b4d6c1",
+      "id": "foam",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#373325",
+      "id": "m373325",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#d7ae65",
+      "id": "md7ae65",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#392f21",
+      "id": "m392f21",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#d7b35c",
+      "id": "md7b35c",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#a5ac8d",
+      "id": "ma5ac8d",
+      "metalness": 0.0,
+      "roughness": 0.8
+    },
+    {
+      "color": "#494a34",
+      "id": "m494a34",
+      "metalness": 0.0,
+      "roughness": 0.8
+    }
+  ],
+  "mode": "true_3d",
+  "objects": [
+    {
+      "accent_material_id": "foam",
+      "asset_id": null,
+      "canopy": true,
+      "dimensions": [
+        15.0,
+        0.32,
+        10.6
+      ],
+      "floors": 1,
+      "id": "water",
+      "inferred_surfaces": "Water volume and small waves are procedural, not recovered simulation.",
+      "kind": "water",
+      "label": "水面",
+      "material_id": "water",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        0.0,
+        -0.3,
+        0.9
+      ],
+      "region_ids": [
+        "water"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "7d516a7ef7c483b7ffa496ac73eb4dceaf6fd7f0cace79d410f3c573ba605a52",
+      "canopy": true,
+      "dimensions": [
+        14.35,
+        1.62,
+        7.6
+      ],
+      "floors": 1,
+      "id": "quay",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "quay",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        0.0,
+        0.035,
+        -0.62
+      ],
+      "region_ids": [
+        "quay"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "2879641ddca7bdff4ea39726876c4ccfd641e36f71cc9ca6daecc56c4e2bda41",
+      "canopy": true,
+      "dimensions": [
+        6.3,
+        5.65,
+        4.85
+      ],
+      "floors": 1,
+      "id": "inn",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "inn",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        0.55,
+        1.035,
+        -1.6
+      ],
+      "region_ids": [
+        "inn"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "7766734392cdf486c8bb9d22d2267276d1c83df10a98c29b8fc63f1a58637e19",
+      "canopy": true,
+      "dimensions": [
+        2.55,
+        3.15,
+        1.8
+      ],
+      "floors": 1,
+      "id": "gate",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "gate",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -4.7,
+        1.02,
+        -0.4
+      ],
+      "region_ids": [
+        "gate"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "1f285477663eafc53aecad4f372a1aaca1b1d2b96364bd919a60f3278ce9e8a0",
+      "canopy": true,
+      "dimensions": [
+        3.45,
+        2.92,
+        2.43
+      ],
+      "floors": 1,
+      "id": "tea",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "tea",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        4.88,
+        1.05,
+        0.38
+      ],
+      "region_ids": [
+        "tea"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "19bac52245751f4960fd91191fab6674eb09c97982698f8194d77af756aae406",
+      "canopy": true,
+      "dimensions": [
+        4.1,
+        5.8,
+        3.8
+      ],
+      "floors": 1,
+      "id": "tree-back",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "tree-back",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -2.5,
+        1.07,
+        -3.3
+      ],
+      "region_ids": [
+        "tree-back"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "46e1c70e0a77eedb50064689171b968b3bd2e7df8efb3fd110fe953b6d7c575a",
+      "canopy": true,
+      "dimensions": [
+        3.25,
+        3.95,
+        2.6
+      ],
+      "floors": 1,
+      "id": "tree-pink",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "tree-pink",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -4.17,
+        1.1,
+        -1.7
+      ],
+      "region_ids": [
+        "tree-pink"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "19bac52245751f4960fd91191fab6674eb09c97982698f8194d77af756aae406",
+      "canopy": true,
+      "dimensions": [
+        3.25,
+        4.6,
+        3.0
+      ],
+      "floors": 1,
+      "id": "tree-right",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "tree-right",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        5.1,
+        1.04,
+        -2.48
+      ],
+      "region_ids": [
+        "tree-right"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "0d0210850c955756303dd8d773c48862896593e54c831df235c0b2e9400606a2",
+      "canopy": true,
+      "dimensions": [
+        3.0,
+        1.48,
+        1.77
+      ],
+      "floors": 1,
+      "id": "pier",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "pier",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -3.45,
+        0.02,
+        2.9
+      ],
+      "region_ids": [
+        "pier"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "7fea75eafe7da7dbb9d646ec178d55c26330e17a837d86b9ed4b489741ed1e18",
+      "canopy": true,
+      "dimensions": [
+        5.65,
+        1.86,
+        1.91
+      ],
+      "floors": 1,
+      "id": "boat-main",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "boat-main",
+      "material_id": "wood",
+      "movement": {
+        "amplitude": 0.16,
+        "bounds": [
+          -0.3,
+          3.9,
+          1.8,
+          4.9
+        ],
+        "speed": 0.18
+      },
+      "parent_id": null,
+      "position": [
+        0.85,
+        0.015,
+        4.2
+      ],
+      "region_ids": [
+        "boat-main"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "77e2adbcc5ca7a8e8413a55777b20c98cbf08f0cf3a4153fc9cc9016e420351f",
+      "canopy": true,
+      "dimensions": [
+        3.23,
+        0.9,
+        1.77
+      ],
+      "floors": 1,
+      "id": "boat-small",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "boat-small",
+      "material_id": "wood",
+      "movement": {
+        "amplitude": 0.07,
+        "bounds": [
+          5.1,
+          2.9,
+          5.9,
+          3.8
+        ],
+        "speed": 0.14
+      },
+      "parent_id": null,
+      "position": [
+        5.5,
+        0.005,
+        3.25
+      ],
+      "region_ids": [
+        "boat-small"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "ff9fbf2b5ed13e757a98c651807aeab031513dae8d3c9af52f051557f2cfeca1",
+      "canopy": true,
+      "dimensions": [
+        1.75,
+        1.55,
+        1.7
+      ],
+      "floors": 1,
+      "id": "garden-left",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "garden-left",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -6.0,
+        1.0,
+        0.2
+      ],
+      "region_ids": [
+        "garden-left"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "ff9fbf2b5ed13e757a98c651807aeab031513dae8d3c9af52f051557f2cfeca1",
+      "canopy": true,
+      "dimensions": [
+        2.0,
+        1.12,
+        1.0
+      ],
+      "floors": 1,
+      "id": "garden-front",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "garden-front",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -1.6,
+        1.07,
+        1.02
+      ],
+      "region_ids": [
+        "garden-front"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "ff9fbf2b5ed13e757a98c651807aeab031513dae8d3c9af52f051557f2cfeca1",
+      "canopy": true,
+      "dimensions": [
+        1.2,
+        1.2,
+        1.6
+      ],
+      "floors": 1,
+      "id": "garden-right",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "garden-right",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        6.25,
+        1.08,
+        1.4
+      ],
+      "region_ids": [
+        "garden-right"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "ff9fbf2b5ed13e757a98c651807aeab031513dae8d3c9af52f051557f2cfeca1",
+      "canopy": true,
+      "dimensions": [
+        1.05,
+        1.0,
+        0.8
+      ],
+      "floors": 1,
+      "id": "garden-inn-right",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "garden-inn-right",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        2.76,
+        1.07,
+        1.26
+      ],
+      "region_ids": [
+        "garden-front"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "ff9fbf2b5ed13e757a98c651807aeab031513dae8d3c9af52f051557f2cfeca1",
+      "canopy": true,
+      "dimensions": [
+        1.05,
+        1.25,
+        1.1
+      ],
+      "floors": 1,
+      "id": "garden-gate",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "garden-gate",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -3.12,
+        1.02,
+        0.1
+      ],
+      "region_ids": [
+        "garden-left"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "95f2a6643955ad077afcccd10fb455c7d95c7afe6749dafd2f54589f6b1529f5",
+      "canopy": true,
+      "dimensions": [
+        0.43,
+        0.45,
+        0.41
+      ],
+      "floors": 1,
+      "id": "crate-0",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "crate-0",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -2.31,
+        1.0,
+        2.83
+      ],
+      "region_ids": [
+        "pier"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "95f2a6643955ad077afcccd10fb455c7d95c7afe6749dafd2f54589f6b1529f5",
+      "canopy": true,
+      "dimensions": [
+        0.43,
+        0.45,
+        0.41
+      ],
+      "floors": 1,
+      "id": "crate-1",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "crate-1",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -3.0,
+        1.0,
+        3.2
+      ],
+      "region_ids": [
+        "pier"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": null,
+      "asset_id": "95f2a6643955ad077afcccd10fb455c7d95c7afe6749dafd2f54589f6b1529f5",
+      "canopy": true,
+      "dimensions": [
+        0.43,
+        0.45,
+        0.41
+      ],
+      "floors": 1,
+      "id": "crate-2",
+      "inferred_surfaces": "Blender solid component; depth and hidden joinery inferred from the supplied view.",
+      "kind": "asset",
+      "label": "crate-2",
+      "material_id": "wood",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        5.7,
+        1.02,
+        1.92
+      ],
+      "region_ids": [
+        "garden-right"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": null
+    },
+    {
+      "accent_material_id": "md7ae65",
+      "asset_id": null,
+      "canopy": true,
+      "dimensions": [
+        1.15,
+        0.255,
+        0.05
+      ],
+      "floors": 1,
+      "id": "inn-sign",
+      "inferred_surfaces": "Readable declared reference sign on a solid board.",
+      "kind": "sign",
+      "label": "青崖渡",
+      "material_id": "m373325",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        0.525,
+        2.97,
+        0.716
+      ],
+      "region_ids": [
+        "inn"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": "青崖渡"
+    },
+    {
+      "accent_material_id": "md7b35c",
+      "asset_id": null,
+      "canopy": true,
+      "dimensions": [
+        0.92,
+        0.34,
+        0.06
+      ],
+      "floors": 1,
+      "id": "gate-sign",
+      "inferred_surfaces": "Readable declared reference sign on a solid board.",
+      "kind": "sign",
+      "label": "渡口",
+      "material_id": "m392f21",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        -4.68,
+        3.34,
+        0.27
+      ],
+      "region_ids": [
+        "gate"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "text": "渡口"
+    },
+    {
+      "accent_material_id": "m494a34",
+      "asset_id": null,
+      "canopy": true,
+      "dimensions": [
+        0.56,
+        0.47,
+        0.05
+      ],
+      "floors": 1,
+      "id": "tea-sign",
+      "inferred_surfaces": "Readable declared reference sign on a solid board.",
+      "kind": "sign",
+      "label": "茶",
+      "material_id": "ma5ac8d",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        4.918,
+        3.645,
+        0.844
+      ],
+      "region_ids": [
+        "tea"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        -0.59624,
+        0.0,
+        0.0,
+        0.802806
+      ],
+      "text": "茶"
+    },
+    {
+      "accent_material_id": "m373325",
+      "asset_id": null,
+      "canopy": true,
+      "dimensions": [
+        0.45,
+        1.17,
+        0.05
+      ],
+      "floors": 1,
+      "id": "inn-side-sign",
+      "inferred_surfaces": "Vertical lettering on the measured detail-3 side sign, visible in the source.",
+      "kind": "sign",
+      "label": "客栈",
+      "material_id": "md7ae65",
+      "movement": null,
+      "parent_id": null,
+      "position": [
+        3.345,
+        3.434,
+        -0.4435
+      ],
+      "region_ids": [
+        "inn"
+      ],
+      "roof_enabled": true,
+      "rotation": [
+        0.0,
+        0.7071067811865476,
+        0.0,
+        0.7071067811865476
+      ],
+      "text": "客栈"
+    }
+  ],
+  "presentation": "jiangnan",
+  "render_quality": "showcase",
+  "seed": 1977,
+  "title": "青崖渡",
+  "view_angle_degrees": 60.0
+}

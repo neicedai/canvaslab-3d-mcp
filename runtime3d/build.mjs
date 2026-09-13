@@ -1,0 +1,21 @@
+import {build} from 'esbuild';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import crypto from 'node:crypto';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
+await fs.mkdir(path.join(root,'dist'),{recursive:true});
+await build({absWorkingDir:root,entryPoints:['src/main.js'],bundle:true,format:'esm',outfile:'dist/scene.js',minify:false,legalComments:'eof'});
+for(const name of ['index.html','style.css']) await fs.copyFile(path.join(root,'src',name),path.join(root,'dist',name));
+await fs.copyFile(path.join(root,'node_modules/three/LICENSE'),path.join(root,'dist/THREE-LICENSE.txt'));
+const icons=['cube','cube-transparent','arrow-counter-clockwise','person-simple-walk','sun','moon','mouse'];
+for(const name of icons)await fs.copyFile(path.join(root,'node_modules/@phosphor-icons/core/assets/regular',`${name}.svg`),path.join(root,'dist',`icon-${name}.svg`));
+await fs.copyFile(path.join(root,'node_modules/@phosphor-icons/core/LICENSE'),path.join(root,'dist/PHOSPHOR-LICENSE.txt'));
+const sources={};
+async function walk(dir){for(const item of await fs.readdir(path.join(root,dir),{withFileTypes:true})){const n=`${dir}/${item.name}`;if(item.isDirectory())await walk(n);else sources[n]=hash(await fs.readFile(path.join(root,n)));}}
+await walk('src');
+for(const n of ['build.mjs','package.json','package-lock.json'])sources[n]=hash(await fs.readFile(path.join(root,n)));
+const files={};for(const n of ['scene.js','index.html','style.css','THREE-LICENSE.txt','PHOSPHOR-LICENSE.txt',...icons.map(n=>`icon-${n}.svg`)])files[n]=hash(await fs.readFile(path.join(root,'dist',n)));
+await fs.writeFile(path.join(root,'dist/runtime-manifest.json'),JSON.stringify({sources,files},null,2));
+console.log(JSON.stringify({runtime:'canvaslab-3d-v0.3',files}));

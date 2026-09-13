@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CanvasLab 3D</title><link rel="icon" href="data:,"><link rel="stylesheet" href="./style.css"></head>
+<body><main><canvas aria-label="可交互三维场景" tabindex="0"></canvas>
+<header><p class="eyebrow">CANVASLAB / SPATIAL STUDIES</p><div class="heading-row"><h1 id="title">载入三维场景</h1><span class="seal">江南</span></div><p class="poem">一方水岸，半日闲舟。</p><p id="status" role="status">正在准备几何与光照…</p></header>
+<aside><span class="badge">3D · 开发预览</span><p>背面结构为推断<br>尚未通过原图还原验收</p></aside>
+<div class="lighting"><button id="day" aria-pressed="true"><img src="./icon-sun.svg" alt="">日景</button><button id="dusk" aria-pressed="false"><img src="./icon-moon.svg" alt="">暮色</button></div>
+<footer><div class="help"><img src="./icon-mouse.svg" alt=""><span>拖拽旋转 · 滚轮缩放</span></div><nav aria-label="场景控制"><button id="iso" class="projection" aria-pressed="true"><img src="./icon-cube-transparent.svg" alt="">等轴</button><button id="perspective" class="projection" aria-pressed="false"><img src="./icon-cube.svg" alt="">透视</button><button id="reset"><img src="./icon-arrow-counter-clockwise.svg" alt="">复位</button><button id="motion" aria-pressed="false"><img src="./icon-person-simple-walk.svg" alt=""><span>播放动画</span></button><label class="move-control">移动物件<select id="object"><option value="">选择物件</option></select></label></nav></footer>
+<div id="error" role="alert" hidden></div></main><script type="module" src="./scene.js"></script></body></html>
