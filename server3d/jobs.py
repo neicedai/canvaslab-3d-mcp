@@ -193,7 +193,10 @@ class Store:
                 raise Conflict("Build must use this job's current validated plan")
             analysis = self.get(db, "analysis", plan["analysis_id"])["data"]
             assets = self.components.build_assets(plan["data"], db)
-            build_id, files, manifest = build_files(plan["data"], job["source"], analysis, job_id, plan_id, assets)
+            projection_input = {}
+            if plan["data"].get("reference_projection"):
+                projection_input["source_bytes"] = (self.root / "assets" / job["source"]["asset_id"]).read_bytes()
+            build_id, files, manifest = build_files(plan["data"], job["source"], analysis, job_id, plan_id, assets, **projection_input)
             fingerprint = sha(canonical([job_id, plan_id, build_id]))
             prior = self.retry(db, "build:"+job_id, idempotency_key, fingerprint)
             directory = self.root / "builds" / job_id / build_id
