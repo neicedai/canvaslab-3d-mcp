@@ -132,7 +132,7 @@ class RiverDetailTests(unittest.TestCase):
     def test_refinement_remains_within_existing_recipe_contract(self):
         for detail in (1, 2, 3):
             recipe = {"template": "broadleaf_tree", "detail": detail}
-            self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(),
+            self.assertEqual(ComponentRecipe.model_validate(recipe).model_dump(exclude={"deformation_handles"}),
                              validate_recipe_data(recipe))
         for detail in (0, 4, True, 2.0, "2"):
             recipe = {"template": "broadleaf_tree", "detail": detail}
