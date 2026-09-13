@@ -71,3 +71,51 @@ jobs:
           path: ${{ runner.temp }}/canvaslab-runtime
           retention-days: 7
           if-no-files-found: error
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install declared dependencies and build the runtime
+        run: |
+          python3 -m venv .ci-venv
+          .ci-venv/bin/python -m pip install -r server3d/requirements.txt
+          npm --prefix runtime3d ci
+          npm --prefix runtime3d run build
+      - name: Install verified minimum-supported Blender
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/blender-ci"
+          cd "$RUNNER_TEMP/blender-ci"
+          base='https://download.blender.org/release/Blender4.2'
+          archive='blender-4.2.0-linux-x64.tar.xz'
+          curl --fail --location --retry 2 --max-time 240 "$base/$archive" -o "$archive"
+          curl --fail --location --retry 2 --max-time 30 "$base/blender-4.2.0.sha256" -o checksums.txt
+          grep -E "^[0-9a-fA-F]{64} [ *]${archive//./\\.}$" checksums.txt > selected.sha256
+          test "$(wc -l < selected.sha256)" -eq 1
+          sha256sum --check selected.sha256
+          tar -xJf "$archive"
+          echo "CANVASLAB3D_BLENDER=$PWD/blender-4.2.0-linux-x64/blender" >> "$GITHUB_ENV"
+          "$PWD/blender-4.2.0-linux-x64/blender" --version
+          google-chrome --version
+      - name: Exercise real geometry, embedded textures and browser controls
+        run: .ci-venv/bin/python -m scripts3d.integration_smoke "$RUNNER_TEMP/canvaslab-integration"
+      - name: Retain synthetic captures and worker diagnostics only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: canvaslab-real-integration
+          path: |
+            ${{ runner.temp }}/canvaslab-integration/integration-report.json
+            ${{ runner.temp }}/canvaslab-integration/*.log
+            ${{ runner.temp }}/canvaslab-integration/blender-*/*.png
+            ${{ runner.temp }}/canvaslab-integration/blender-*/observation.json
+            ${{ runner.temp }}/canvaslab-integration/textured-*/*.png
+            ${{ runner.temp }}/canvaslab-integration/textured-*/observation.json
+            ${{ runner.temp }}/canvaslab-integration/store/component-work/*/*.log
+          retention-days: 7
+          if-no-files-found: warn
