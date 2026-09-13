@@ -19,10 +19,10 @@ def basis(camera):
     return right, up
 
 
-def project_box(camera, world_box, size):
+def project_box(camera, world_box, size, *, framing_aspect=1.45):
     right, up = basis(camera)
     width,height = size
-    span = camera["vertical_span"]*max(1, 1.45/(width/height))
+    span = camera["vertical_span"]*max(1, framing_aspect/(width/height))
     projected = []
     for x in [world_box[0][0],world_box[1][0]]:
         for y in [world_box[0][1],world_box[1][1]]:
@@ -39,6 +39,7 @@ def suggest_camera(plan, analysis, observation):
         raise ValueError("Camera fitting currently supports orthographic scenes only; perspective needs separate calibration")
     sx,sy,sw,sh = analysis["scene_box"]
     size = observation["native_size"]
+    framing_aspect = sw/sh if plan.get("appearance_mode") == "reference" else 1.45
     targets = {r["id"]: r for r in analysis["regions"]}
     captured = observation["reference"]["objects"]
     pairs = []
@@ -62,7 +63,7 @@ def suggest_camera(plan, analysis, observation):
     # Verify Python projection against the actual Three.js capture before fitting.
     for identity,world,_,_ in pairs:
         observed = captured[identity].get("screen_box")
-        predicted = project_box(camera,world,size)
+        predicted = project_box(camera,world,size,framing_aspect=framing_aspect)
         if observed is None or max(abs(a-b) for a,b in zip(observed,predicted)) > 1.5:
             raise ValueError("Captured camera geometry does not match this fitter; recapture the reference view")
     direction = sub(camera["position"], camera["target"])
@@ -81,7 +82,7 @@ def suggest_camera(plan, analysis, observation):
     def score(c):
         losses = []
         for _,world,target,weight in pairs:
-            a,b,w,h = project_box(c,world,size); x,y,tw,th = target
+            a,b,w,h = project_box(c,world,size,framing_aspect=framing_aspect); x,y,tw,th = target
             residuals = [(a+w/2-x-tw/2)/diagonal,(b+h/2-y-th/2)/diagonal,
                          .1*math.log(max(w,.001)/tw),.1*math.log(max(h,.001)/th)]
             losses.append(weight*sum(r*r if abs(r)<=.1 else .2*abs(r)-.01 for r in residuals))
@@ -109,7 +110,7 @@ def suggest_camera(plan, analysis, observation):
     objects = []
     for identity,world,target,_ in pairs:
         def errors(c):
-            x,y,w,h = project_box(c,world,size); a,b,tw,th = target
+            x,y,w,h = project_box(c,world,size,framing_aspect=framing_aspect); a,b,tw,th = target
             return {"center_error_ratio":math.hypot(x+w/2-a-tw/2,y+h/2-b-th/2)/diagonal,
                     "width_error_ratio":abs(w-tw)/tw,"height_error_ratio":abs(h-th)/th}
         before,after = errors(camera),errors(proposed)
