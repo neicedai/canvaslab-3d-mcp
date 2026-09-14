@@ -1,0 +1,5 @@
+# Install in the separate worker environment, not the existing MCP environment.
+transformers==4.48.3
+huggingface-hub==0.28.1
+tokenizers==0.21.0
+safetensors==0.5.3
