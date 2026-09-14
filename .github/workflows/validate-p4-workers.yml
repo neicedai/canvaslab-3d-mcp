@@ -1,0 +1,48 @@
+name: Validate optional P4 workers
+on:
+  pull_request:
+    branches: [master]
+    paths: ['gpu3d/**', 'server3d/gpu*.py', 'server3d/mcp_server.py', 'server3d/api.py', 'server3d/tests/test_gpu*.py', 'scripts3d/gpu_cpu_smoke.py', '.github/workflows/validate-p4-workers.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p4-workers-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-model-cpu-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CANVASLAB3D_GPU_ENABLED: '1'
+      HF_HUB_DISABLE_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install real model runtime on CPU (not a P4 test)
+        run: |
+          python3 -m venv .gpu-ci
+          .gpu-ci/bin/python -m pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
+          .gpu-ci/bin/python -m pip install -r server3d/requirements.txt -r gpu3d/requirements-models.txt
+          .gpu-ci/bin/python -m pip check
+      - name: Queue and contract regression
+        run: .gpu-ci/bin/python -m unittest discover -s server3d/tests -p 'test_gpu*.py' -v
+      - name: Download fixed public weights and verify publisher checksums
+        run: .gpu-ci/bin/python -m gpu3d.models download --models "$RUNNER_TEMP/canvaslab-models"
+      - name: Real offline CPU inference through MCP and durable queue
+        env:
+          HF_HUB_OFFLINE: '1'
+          TRANSFORMERS_OFFLINE: '1'
+        run: .gpu-ci/bin/python -m scripts3d.gpu_cpu_smoke --models "$RUNNER_TEMP/canvaslab-models" --output "$RUNNER_TEMP/gpu-smoke"
+      - name: Retain synthetic-only CPU evidence, never user sources or model weights
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p4-worker-cpu-contract-evidence
+          path: |
+            ${{ runner.temp }}/gpu-smoke/gpu-cpu-report.json
+            ${{ runner.temp }}/gpu-smoke/gpu-work/*/output/*
+            ${{ runner.temp }}/gpu-smoke/gpu-work/*/worker.log
+          retention-days: 7
+          if-no-files-found: warn
