@@ -118,7 +118,7 @@ def build_plan(assets):
 
 
 def decode_source(repo: Path, output: Path):
-    encoded=(repo/'benchmarks3d/generated-jiangnan-reference.jpg.b64').read_text(encoding='ascii').strip()
+    encoded=''.join((repo/'benchmarks3d/generated-jiangnan-reference.jpg.b64').read_text(encoding='ascii').split())
     payload=base64.b64decode(encoded,validate=True)
     target=output/'source-reference.jpg'; target.write_bytes(payload)
     with Image.open(target) as im:
