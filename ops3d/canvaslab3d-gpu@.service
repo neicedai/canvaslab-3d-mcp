@@ -1,0 +1,21 @@
+[Unit]
+Description=CanvasLab 3D on-demand GPU worker %i
+After=canvaslab3d.service
+Requires=canvaslab3d.service
+
+[Service]
+User=canvaslab3d
+Group=canvaslab3d
+WorkingDirectory=/srv/canvaslab-3d/app
+Environment=CANVASLAB3D_GPU_ENABLED=1
+Environment=HF_HUB_OFFLINE=1
+Environment=TRANSFORMERS_OFFLINE=1
+ExecStart=/srv/canvaslab-3d/gpu-venv/bin/python -m gpu3d.worker --data /srv/canvaslab-3d/data --models /srv/canvaslab-3d/models --device cuda:%i --operations depth segment
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=20
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

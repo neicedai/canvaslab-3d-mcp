@@ -1,0 +1,20 @@
+[Unit]
+Description=CanvasLab 3D authenticated MCP
+After=network.target
+
+[Service]
+User=canvaslab3d
+Group=canvaslab3d
+WorkingDirectory=/srv/canvaslab-3d/app
+Environment=CANVASLAB3D_DATA=/srv/canvaslab-3d/data
+Environment=CANVASLAB3D_GPU_ENABLED=1
+Environment=CANVASLAB3D_BLENDER=/srv/canvaslab-3d/tools/blender-4.2.0-linux-x64/blender
+ExecStart=/srv/canvaslab-3d/venv/bin/python -m scripts3d.serve --data /srv/canvaslab-3d/data --port 8031
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=20
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -15,7 +15,7 @@ from server3d.jobs import Store, Conflict
 from server3d.gpu_jobs import GPUQueue, VisionRequest, source_image, HEARTBEAT_TTL
 from gpu3d.models import verify, MODELS
 from gpu3d.outputs import write_outputs
-from gpu3d.worker import device_lock, offline_env, require_linux_worker
+from gpu3d.worker import device_lock, offline_env, require_linux_worker, device_is_busy
 
 
 class GPUQueueTests(unittest.TestCase):
@@ -192,6 +192,26 @@ class GPUQueueTests(unittest.TestCase):
                 require_linux_worker()
         with patch("gpu3d.worker.sys.platform", "linux"):
             require_linux_worker()
+
+    def test_worker_yields_to_existing_work_without_cuda_probe(self):
+        with patch("gpu3d.worker.subprocess.run") as run:
+            run.return_value.stdout = "155, 0\n"
+            self.assertFalse(device_is_busy(self.identity))
+            run.return_value.stdout = "2200, 0\n"
+            self.assertTrue(device_is_busy(self.identity))
+            run.return_value.stdout = "155, 65\n"
+            self.assertTrue(device_is_busy(self.identity))
+            run.assert_called_with(
+                ["nvidia-smi", "--id=synthetic-device-0", "--query-gpu=memory.used,utilization.gpu",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=10, check=True)
+        with patch("gpu3d.worker.subprocess.run") as run:
+            self.assertFalse(device_is_busy({"execution":"cpu"}))
+            run.assert_not_called()
+        with patch("gpu3d.worker.subprocess.run") as run:
+            run.return_value.stdout = "3, 0\n"
+            self.assertFalse(device_is_busy({"execution":"cuda","device_key":"d7f590b6-dfa7-8924-f660-670b88096c3d"}))
+            self.assertIn("--id=GPU-d7f590b6-dfa7-8924-f660-670b88096c3d", run.call_args.args[0])
 
     def test_offline_child_removes_secrets(self):
         with patch.dict("os.environ",{"CANVASLAB3D_TOKEN":"secret","HF_TOKEN":"secret"}):

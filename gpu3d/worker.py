@@ -58,6 +58,27 @@ def hardware_probe(device):
     return json.loads(result.stdout.strip().splitlines()[-1])
 
 
+def device_is_busy(identity):
+    """Yield to existing workloads without creating a resident CUDA context.
+
+    This admission check is advisory: another application can start afterwards.
+    Small unloaded-model CUDA contexts (as used by the 2D service) are allowed.
+    """
+    if identity["execution"] != "cuda":
+        return False
+    device_id = identity["device_key"]
+    try:
+        device_id = "GPU-" + str(uuid.UUID(device_id))
+    except ValueError:
+        pass  # nvidia-smi also accepts already prefixed GPU/MIG identifiers.
+    result = subprocess.run([
+        "nvidia-smi", "--id=" + device_id,
+        "--query-gpu=memory.used,utilization.gpu", "--format=csv,noheader,nounits",
+    ], capture_output=True, text=True, timeout=10, check=True)
+    used, utilization = [int(value.strip()) for value in result.stdout.strip().split(",")]
+    return used > 512 or utilization > 10
+
+
 def run_task(queue, worker_id, task, models, device, lock_fd=None):
     work = queue.root / task["task_id"]
     work.mkdir(parents=True, exist_ok=False)
@@ -129,6 +150,12 @@ def main():
         queue.register(worker_id, identity, args.operations)
         try:
             while True:
+                if device_is_busy(identity):
+                    queue.heartbeat(worker_id)
+                    if args.once:
+                        break
+                    time.sleep(2)
+                    continue
                 task = queue.claim(worker_id)
                 if task:
                     try:

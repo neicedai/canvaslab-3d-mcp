@@ -125,6 +125,8 @@ class GPUQueue:
         for worker in workers:
             worker["online"] = time.time()-worker["last_seen"] <= HEARTBEAT_TTL
         return {"enabled": enabled(), "contract": CONTRACT, "workers": workers, "task_counts": counts,
+                "model_lifecycle": "one_inference_subprocess_per_task",
+                "idle_cuda_context": False, "release_policy": "child_exit_after_success_failure_or_cancellation",
                 "supported_operations": list(MODELS), "precision": "float32", "max_inflight_per_device": 1,
                 "combined_vram": False, "image_to_mesh_enabled": False, "automatic_scene_mutation": False}
 
