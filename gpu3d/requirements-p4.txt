@@ -1,0 +1,7 @@
+# Python 3.11 recommended. Official CUDA 11.8 wheels retain the Pascal path.
+# Do not upgrade this to a cu128/cu13 wheel without a real P4 kernel probe.
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.6.0+cu118
+torchvision==0.21.0+cu118
+-r ../server3d/requirements.txt
+-r requirements-models.txt
