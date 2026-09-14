@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import argparse, base64, copy, json, os, shutil, subprocess, tempfile, uuid
+import argparse, base64, copy, json, os, re, shutil, subprocess, tempfile, uuid
 from pathlib import Path
 from PIL import Image, ImageDraw
 
@@ -118,11 +118,16 @@ def build_plan(assets):
 
 
 def decode_source(repo: Path, output: Path):
-    encoded=''.join((repo/'benchmarks3d/generated-jiangnan-reference.jpg.b64').read_text(encoding='ascii').split())
+    raw=(repo/'benchmarks3d/generated-jiangnan-reference.jpg.b64').read_text(encoding='ascii')
+    chunks=re.findall(r'[A-Za-z0-9+/=]{64,}', raw)
+    if not chunks:
+        raise RuntimeError('generated source fixture contains no base64 payload')
+    encoded=''.join(chunks)
     payload=base64.b64decode(encoded,validate=True)
     target=output/'source-reference.jpg'; target.write_bytes(payload)
     with Image.open(target) as im:
         if im.size != (512,384): raise RuntimeError(f'unexpected source size {im.size}')
+        im.verify()
     return payload,target
 
 
