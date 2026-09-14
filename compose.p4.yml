@@ -1,0 +1,50 @@
+# Run from repository root: docker compose -f compose.p4.yml --profile setup run --rm prepare
+# Then: docker compose -f compose.p4.yml up -d p4-depth p4-segment
+x-worker: &worker
+  build:
+    context: .
+    dockerfile: gpu3d/Dockerfile
+  image: canvaslab-p4-worker:local
+  environment:
+    CANVASLAB3D_GPU_ENABLED: "1"
+    HF_HUB_OFFLINE: "1"
+    TRANSFORMERS_OFFLINE: "1"
+    NVIDIA_DRIVER_CAPABILITIES: compute,utility
+  volumes:
+    - ${CANVASLAB3D_DATA:-./.canvaslab3d}:/data
+    - ${CANVASLAB3D_GPU_MODELS:-./.canvaslab3d-gpu-models}:/models:ro
+  restart: "no"
+  network_mode: none
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  mem_limit: 8g
+services:
+  prepare:
+    build:
+      context: .
+      dockerfile: gpu3d/Dockerfile
+    image: canvaslab-p4-worker:local
+    profiles: [setup]
+    volumes:
+      - ${CANVASLAB3D_GPU_MODELS:-./.canvaslab3d-gpu-models}:/models
+    command: [python, -m, gpu3d.models, download, --models, /models]
+  p4-depth:
+    <<: *worker
+    command: [python, -m, gpu3d.worker, --data, /data, --models, /models, --device, "cuda:0", --operations, depth]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+  p4-segment:
+    <<: *worker
+    command: [python, -m, gpu3d.worker, --data, /data, --models, /models, --device, "cuda:0", --operations, segment]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
