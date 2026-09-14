@@ -15,6 +15,8 @@ from .component_schema import ComponentRecipe, COMPONENT_CONTRACT, COMPONENT_TEM
 from .deformation_fit import suggest_deformation_handles
 from .fidelity_compare import evaluate_scene_candidate
 from .refinement import install_refinement_tools
+from .gpu_tools import install_gpu_tools
+from .gpu_jobs import GPUQueue, VisionRequest
 
 
 def expected(function, *args):
@@ -31,6 +33,8 @@ def create_mcp(store: Store):
         "validate and persist a scene plan, then build from that plan ID. Never invent observation evidence. "
         "No production fidelity/completion certificates are supported yet. Generated scenes are previews. "
         "Call scene_runtime_status before testing and retain exact source/build/capture versions. "
+        "When GPU vision is enabled, use scene_gpu_status and submit_scene_gpu_task for source-bound "
+        "relative depth and prompted masks before planning; predictions are not measured geometry. "
         "Use appearance_mode=reference for source-led jobs. measure_scene_fidelity compares original "
         "color, edges and fine detail and returns native worst-patch coordinates. With supplied source "
         "landmarks and a current audit, refine_scene_component runs bounded isolated candidate trials; "
@@ -49,6 +53,7 @@ def create_mcp(store: Store):
         status = store.status()
         status["supported"] += ["native_reference_appearance_metrics", "cross_job_verified_fidelity_comparison",
                                 "joint_deformation_fit", "bounded_child_job_refinement_trials"]
+        status["gpu"] = expected(GPUQueue(store).status)
         return status
 
     @mcp.tool(structured_output=True)
@@ -56,6 +61,7 @@ def create_mcp(store: Store):
         """Read strict schemas before proposing source annotations or a procedural scene."""
         return {"analysis_schema": Analysis.model_json_schema(), "scene_schema": ScenePlan.model_json_schema(),
                 "component_schema":ComponentRecipe.model_json_schema(), "component_contract":COMPONENT_CONTRACT,
+                "gpu_request_schema": VisionRequest.model_json_schema(),
                 "workflow_complete_supported": False}
 
     @mcp.tool(structured_output=True)
@@ -214,6 +220,7 @@ def create_mcp(store: Store):
         return expected(store.cancel, job_id)
 
     install_refinement_tools(mcp, store, expected)
+    install_gpu_tools(mcp, store, expected)
     return mcp
 
 
