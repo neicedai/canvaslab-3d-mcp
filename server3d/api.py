@@ -87,5 +87,13 @@ def create_app(store=None, token=None):
             raise HTTPException(404)
         return FileResponse(store.root / "captures" / capture_id / filename)
 
+    @app.get("/gpu-tasks/{task_id}/{filename}")
+    def gpu_artifact(task_id: str, filename: str):
+        from .gpu_jobs import GPUQueue
+        path = GPUQueue(store).artifact(task_id, filename)
+        return FileResponse(path, filename=filename,
+                            media_type="image/png" if filename.endswith(".png") else
+                            "application/json" if filename == "result.json" else "application/octet-stream")
+
     app.mount("/", transport)
     return app
