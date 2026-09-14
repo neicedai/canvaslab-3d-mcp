@@ -35,6 +35,7 @@ def offline_env():
 
 @contextmanager
 def device_lock(root: Path, device_key: str):
+    require_linux_worker()
     import fcntl
     root.mkdir(parents=True, exist_ok=True)
     path = root / (hashlib.sha256(device_key.encode()).hexdigest()+".lock")
@@ -92,6 +93,11 @@ def run_task(queue, worker_id, task, models, device, lock_fd=None):
             child.kill(); child.wait(timeout=10)
 
 
+def require_linux_worker():
+    if not sys.platform.startswith("linux"):
+        raise ValueError("GPU workers require Linux (including WSL2 or a Linux container); the MCP server can still run on Windows")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, required=True)
@@ -101,6 +107,10 @@ def main():
     parser.add_argument("--check", action="store_true", help="Verify models and run real device kernels, then exit")
     parser.add_argument("--once", action="store_true", help="Drain at most one already queued task")
     args = parser.parse_args()
+    try:
+        require_linux_worker()
+    except ValueError as exc:
+        parser.error(str(exc))
     def stop(_signal, _frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, stop)

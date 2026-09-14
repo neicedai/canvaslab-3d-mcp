@@ -2,6 +2,7 @@
 import copy
 import io
 import json
+import sys
 import tempfile
 import time
 import unittest
@@ -14,7 +15,7 @@ from server3d.jobs import Store, Conflict
 from server3d.gpu_jobs import GPUQueue, VisionRequest, source_image, HEARTBEAT_TTL
 from gpu3d.models import verify, MODELS
 from gpu3d.outputs import write_outputs
-from gpu3d.worker import device_lock, offline_env
+from gpu3d.worker import device_lock, offline_env, require_linux_worker
 
 
 class GPUQueueTests(unittest.TestCase):
@@ -178,11 +179,19 @@ class GPUQueueTests(unittest.TestCase):
             write_outputs(self.q.root/task["task_id"]/"output",task,np.full((64,64),np.nan),
                           Image.new("RGB",(64,64)),{"runtime":self.identity})
 
+    @unittest.skipUnless(sys.platform.startswith("linux"), "Linux worker device lock; MCP queue tests remain cross-platform")
     def test_single_physical_device_lock(self):
         with device_lock(self.store.root/"locks","uuid"):
             with self.assertRaises(ValueError):
                 with device_lock(self.store.root/"locks","uuid"): pass
         with device_lock(self.store.root/"locks","uuid"): pass
+
+    def test_worker_rejects_unsupported_platform_before_device_setup(self):
+        with patch("gpu3d.worker.sys.platform", "win32"):
+            with self.assertRaisesRegex(ValueError, "require Linux"):
+                require_linux_worker()
+        with patch("gpu3d.worker.sys.platform", "linux"):
+            require_linux_worker()
 
     def test_offline_child_removes_secrets(self):
         with patch.dict("os.environ",{"CANVASLAB3D_TOKEN":"secret","HF_TOKEN":"secret"}):

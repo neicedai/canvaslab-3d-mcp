@@ -19,6 +19,8 @@ SF3D / TripoSR / TRELLIS、GPU 法线、自动网格生成、UV 烘焙本轮**�
 
 首版是同一 Linux 主机/虚拟机内的本地磁盘方案。MCP 和 worker 共用 `CANVASLAB3D_DATA`；SQLite 不要放在 NFS/SMB，也不建议两个宿主机共用此目录。PVE 部署时显卡必须已经直通到运行 worker 的 Linux 虚拟机，宿主机看到显卡不代表容器可用。
 
+Windows 可运行 MCP 及通用队列测试；worker 本身仅支持 Linux，Windows 启动会明确提示。设备锁测试只在 Linux 执行，Windows 回归将其标为 skipped，不代表设备锁或 P4 硬件验证通过。使用 WSL2 时也需要在 Linux 环境内运行 MCP 和 worker，并共用 Linux 本地数据目录。
+
 建议 Python 3.11 独立环境，锁定 PyTorch 2.6.0 + CUDA 11.8 wheels，FP32/eager attention；禁用 Flash/高效 SDPA，不要求 xformers、不调用 BF16，不自动量化。启动先检查实际 CUDA 内核和设备 UUID；P4 需要 Pascal 编译目标。失败立即报错，不回退 CPU 冒充 GPU 成功。CUDA 驱动与 NVIDIA Container Toolkit 由服务器管理员配置，本补丁不修改驱动。
 
 P4 可使用的 PyTorch wheel 与实际驱动组合仍必须在实机跑 `--check`。80% PyTorch 内存配额不是整卡硬隔离：CUDA 上下文和其他应用仍会占显存；OOM 记录失败、不偷偷缩图或无限重试。一次任务最长 600 秒，等待队列最长 900 秒，最多 64 个待处理/运行任务，累计 256 个任务；历史失败工作目录保留供诊断。
