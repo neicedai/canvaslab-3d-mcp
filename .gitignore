@@ -41,3 +41,8 @@ design/**/*.zip
 *.njsproj
 *.sln
 *.sw?
+
+# Optional P4 worker environments and downloaded model weights
+.venv-p4/
+.gpu-ci/
+.canvaslab3d-gpu-models/
