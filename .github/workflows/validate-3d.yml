@@ -162,7 +162,7 @@ jobs:
           "$PWD/blender-4.2.0-linux-x64/blender" --version
           google-chrome --version
       - name: Reconstruct the generated Jiangnan reference as true 3D
-        run: .ci-venv/bin/python -m benchmarks3d.generated_jiangnan_reconstruction "$RUNNER_TEMP/generated-jiangnan-reconstruction"
+        run: .ci-venv/bin/python -m scripts3d.generated_jiangnan_reconstruction "$RUNNER_TEMP/generated-jiangnan-reconstruction"
       - name: Retain the reconstructed web project and evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
